@@ -40,6 +40,8 @@ impl geng::State for State {
         let delta_time = delta_time as f32;
 
         let ticks = self.beat_controller.update(delta_time);
+        self.music_controller
+            .set_bpm(self.beat_controller.get_bpm());
         for _ in 0..ticks {
             self.music_controller.tick();
         }
@@ -56,6 +58,20 @@ impl geng::State for State {
                 self.music_controller.tick();
             }
         }
+    }
+
+    fn ui<'a>(&mut self, _cx: &'a geng::ui::Controller) -> Box<dyn geng::ui::Widget + 'a> {
+        use geng::ui::*;
+
+        geng::ui::stack![geng::ui::Text::new(
+            format!("BPM: {:.0}", self.beat_controller.get_bpm()),
+            self.geng.default_font().clone(),
+            10.0,
+            Rgba::WHITE
+        )
+        .fixed_size(vec2(100.0, 100.0))
+        .align(vec2(0.0, 1.0))]
+        .boxed()
     }
 }
 

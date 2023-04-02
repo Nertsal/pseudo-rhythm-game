@@ -64,10 +64,15 @@ impl MusicController {
     pub fn tick(&mut self) {
         self.tick += 1;
 
-        if self.tick % self.config.ticks_per_beat == 0 {
+        let is_beat = self.tick % self.config.ticks_per_beat == 0;
+        if is_beat {
             self.beat();
         }
 
+        self.section_tick(is_beat);
+    }
+
+    fn section_tick(&mut self, immediate_next_section: bool) {
         if let Some((section_name, section)) = &mut self.current_section {
             let synthesizer = self
                 .synthesizers
@@ -102,12 +107,9 @@ impl MusicController {
                                 self.tick_t,
                                 synthesizer,
                             ));
-                        if duration > 0 {
-                            section.events.push_front(SectionEvent::Delay {
-                                delay: duration.saturating_sub(1),
-                            });
-                            break;
-                        }
+                        section
+                            .events
+                            .push_front(SectionEvent::Delay { delay: duration });
                     }
                     SectionEvent::Tagged(tagged) => match tagged {
                         SectionEventTagged::ChangeDefaultVelocity { value } => {
@@ -123,22 +125,26 @@ impl MusicController {
             if section.events.is_empty() {
                 // End of the section
                 self.current_section = None;
+                if immediate_next_section {
+                    self.next_section();
+                    self.section_tick(false);
+                }
             }
         }
     }
 
     fn beat(&mut self) {
-        let beat = self.tick / self.config.ticks_per_beat;
+        // let beat = self.tick / self.config.ticks_per_beat;
 
-        let sound = if beat % 2 == 0 {
-            // Major beat
-            source::Beat::default().into_raw_source()
-        } else {
-            // Minor beat
-            source::Beat::new(150.0, 0.2).into_raw_source()
-        };
+        // let sound = if beat % 2 == 0 {
+        //     // Major beat
+        //     source::Beat::default().into_raw_source()
+        // } else {
+        //     // Minor beat
+        //     source::Beat::new(150.0, 0.2).into_raw_source()
+        // };
 
-        self.sounds_queue.play_immediately(sound);
+        // self.sounds_queue.play_immediately(sound);
 
         if self.current_section.is_none() {
             self.next_section();

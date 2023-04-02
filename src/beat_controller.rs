@@ -43,6 +43,11 @@ impl BeatController {
         }
     }
 
+    /// Returns the current bpm.
+    pub fn get_bpm(&self) -> f32 {
+        self.current_bpm
+    }
+
     /// Update the controller.
     /// Returns the number of ticks that happen in the `delta_time`.
     pub fn update(&mut self, delta_time: f32) -> Ticks {
@@ -52,9 +57,7 @@ impl BeatController {
         if self.last_player_beat > 60.0 / self.current_bpm + self.config.miss_time_late {
             // Late player beat -> slow down
             let target_bpm = 60.0 / self.last_player_beat;
-            let alpha = 0.5;
-            self.current_bpm = ((1.0 - alpha) * self.last_player_bpm + alpha * target_bpm)
-                .clamp(self.config.bpm_min as f32, self.config.bpm_max as f32);
+            self.current_bpm = tween_bpm(self.last_player_bpm, target_bpm, &self.config);
         }
 
         // Music tick
@@ -115,9 +118,7 @@ impl BeatController {
         }
 
         let target_bpm = 60.0 / self.last_player_beat;
-        let alpha = 0.5;
-        self.current_bpm = ((1.0 - alpha) * self.last_player_bpm + alpha * target_bpm)
-            .clamp(self.config.bpm_min as f32, self.config.bpm_max as f32);
+        self.current_bpm = tween_bpm(self.last_player_bpm, target_bpm, &self.config);
         self.last_player_bpm = self.current_bpm;
         self.last_player_beat = 0.0;
     }
@@ -135,11 +136,16 @@ impl BeatController {
 impl Default for BeatControllerConfig {
     fn default() -> Self {
         Self {
-            bpm_min: 50,
+            bpm_min: 30,
             bpm_max: 240,
             ticks_per_beat: 4,
             miss_time_early: 0.1,
             miss_time_late: 0.2,
         }
     }
+}
+
+fn tween_bpm(current: f32, target: f32, config: &BeatControllerConfig) -> f32 {
+    let alpha = 0.5;
+    ((1.0 - alpha) * current + alpha * target).clamp(config.bpm_min as f32, config.bpm_max as f32)
 }
