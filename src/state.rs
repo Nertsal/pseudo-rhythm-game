@@ -1,6 +1,7 @@
 use super::*;
 
 use beat_controller::BeatController;
+use config::MusicConfig;
 use music_controller::MusicController;
 
 pub struct State {
@@ -14,13 +15,18 @@ impl State {
     pub fn new(
         geng: &Geng,
         assets: &Rc<Assets>,
+        config: MusicConfig,
         synthesizers: HashMap<config::SectionName, rustysynth::Synthesizer>,
     ) -> Self {
+        let beat_config = beat_controller::BeatControllerConfig {
+            ticks_per_beat: config.ticks_per_beat,
+            ..default()
+        };
         Self {
             geng: geng.clone(),
             assets: assets.clone(),
-            beat_controller: BeatController::new(default()),
-            music_controller: MusicController::new(default(), 50.0, synthesizers),
+            beat_controller: BeatController::new(beat_config),
+            music_controller: MusicController::new(config, 50.0, synthesizers),
         }
     }
 }
@@ -88,7 +94,7 @@ pub fn run(geng: &Geng) -> impl geng::State {
                 synthesizers.insert(section_name.to_owned(), synthesizer);
             }
 
-            State::new(&geng, &assets, synthesizers)
+            State::new(&geng, &assets, config, synthesizers)
         }
     };
     geng::LoadingScreen::new(geng, geng::EmptyLoadingScreen::new(geng), future)
