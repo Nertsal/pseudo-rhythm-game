@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 geng = { git = "https://github.com/kuviman/geng", version = "0.14.0" }
+rodio = { git = "https://github.com/kuviman/rodio", branch = "mp3-duration" }
+serde = { version = "1.0.156", features = ["derive"] }
+rustysynth = "0.9.0"
