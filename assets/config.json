@@ -8,7 +8,7 @@
   "sections": {
     "slow": {
       "soundfont": "drums",
-      "bpm_range": [0, 250],
+      "bpm_range": [0, 50],
       "volume": 1.0,
       "key": "C2",
       "default_velocity": 50,
@@ -17,33 +17,29 @@
         11, 7, 7, 7
       ]
     },
-    "10": {
-      "soundfont": "piano",
-      "bpm_range": [250, 100],
+    "moderate": {
+      "soundfont": "drums",
+      "bpm_range": [50, 100],
       "volume": 1.0,
-      "key": "F3",
+      "key": "C2",
       "default_velocity": 50,
       "default_duration": 1,
       "events": [
-        0,
+        11,
         {
           "delay": 1
         },
-        5
+        7
       ]
     },
     "fast": {
-      "soundfont": "piano",
-      "bpm_range": [2100, 200],
+      "soundfont": "drums",
+      "bpm_range": [100, 200],
       "volume": 1.0,
-      "key": "F3",
+      "key": "C2",
       "default_velocity": 50,
       "default_duration": 1,
       "events": [
-        0,
-        {
-          "delay": 2
-        },
         7
       ]
     }
