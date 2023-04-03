@@ -1,15 +1,22 @@
-use geng::prelude::*;
+use geng::{prelude::*, Camera2d};
 
 use crate::{
     assets::Assets,
     sound::{MusicConfig, SectionName, Synthesizer},
-    world::World,
+    world::{ActionMove, MoveSlide, PlayerAction, World},
 };
 
 pub struct Game {
-    pub geng: Geng,
-    pub assets: Rc<Assets>,
-    pub world: World,
+    geng: Geng,
+    assets: Rc<Assets>,
+    world: World,
+    grid: Grid,
+    camera: Camera2d,
+}
+
+struct Grid {
+    cell_size: vec2<f32>,
+    offset: vec2<f32>,
 }
 
 impl Game {
@@ -23,6 +30,12 @@ impl Game {
             geng: geng.clone(),
             assets: assets.clone(),
             world: World::new(geng, music_config, synthesizers),
+            grid: Grid::default(),
+            camera: Camera2d {
+                center: vec2::ZERO,
+                rotation: 0.0,
+                fov: 30.0,
+            },
         }
     }
 }
@@ -30,6 +43,21 @@ impl Game {
 impl geng::State for Game {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
+
+        let radius = self.grid.cell_size.x.min(self.grid.cell_size.y) / 2.0;
+        for (&id, &pos) in &self.world.entities.positions {
+            let pos = self.grid.grid_to_world(pos);
+            let color = if id == self.world.player.entity {
+                Rgba::GREEN
+            } else {
+                Rgba::RED
+            };
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Ellipse::circle(pos, radius, color),
+            );
+        }
     }
 
     fn update(&mut self, delta_time: f64) {
@@ -41,8 +69,18 @@ impl geng::State for Game {
     }
 
     fn handle_event(&mut self, event: geng::Event) {
-        if let geng::Event::KeyDown { key: geng::Key::S } = event {
-            self.world.player_beat();
+        if let geng::Event::KeyDown { key } = event {
+            let delta = match key {
+                geng::Key::W => Some(vec2(0, 1)),
+                geng::Key::S => Some(vec2(0, -1)),
+                geng::Key::A => Some(vec2(-1, 0)),
+                geng::Key::D => Some(vec2(1, 0)),
+                _ => None,
+            };
+            if let Some(delta) = delta {
+                self.world
+                    .player_action(PlayerAction::Move(ActionMove::Slide(MoveSlide { delta })));
+            }
         }
     }
 
@@ -58,6 +96,45 @@ impl geng::State for Game {
         .fixed_size(vec2(100.0, 100.0))
         .align(vec2(0.0, 1.0))]
         .boxed()
+    }
+}
+
+impl Grid {
+    pub fn matrix(&self) -> mat3<f32> {
+        mat3::translate(self.offset) * mat3::scale(self.cell_size)
+    }
+
+    pub fn grid_to_world(&self, grid_pos: vec2<i64>) -> vec2<f32> {
+        // self.offset + self.cell_size * grid_pos.map(|x| x as f32)
+        let pos = self.matrix().inverse() * grid_pos.extend(1).map(|x| x as f32);
+        pos.into_2d()
+    }
+
+    /// Returns the grid position and an in-cell offset from the cell pos to `world_pos`.
+    pub fn world_to_grid(&self, world_pos: vec2<f32>) -> (vec2<i64>, vec2<f32>) {
+        // (world_pos / self.cell_size).map(|x| x.floor() as i64)
+        let grid_pos = self.matrix() * world_pos.extend(1.0);
+        let mut offset = grid_pos.into_2d();
+        let mut cell_pos = vec2(offset.x.trunc() as _, offset.y.trunc() as _);
+        offset = vec2(offset.x.fract(), offset.y.fract());
+        if offset.x < 0.0 {
+            offset.x += 1.0;
+            cell_pos.x -= 1;
+        }
+        if offset.y < 0.0 {
+            offset.y += 1.0;
+            cell_pos.y -= 1;
+        }
+        (cell_pos, offset)
+    }
+}
+
+impl Default for Grid {
+    fn default() -> Self {
+        Self {
+            cell_size: vec2(1.0, 1.0),
+            offset: vec2::ZERO,
+        }
     }
 }
 

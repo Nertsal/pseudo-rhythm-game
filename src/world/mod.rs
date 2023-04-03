@@ -6,17 +6,26 @@ use crate::{
 };
 
 pub struct World {
-    geng: Geng,
-    id_gen: IdGenerator,
+    pub geng: Geng,
+    pub player: Player,
     pub entities: Entities,
-    items: Collection<Item>,
+    pub items: Collection<Item>,
     pub beat_controller: BeatController,
     pub music_controller: MusicController,
 }
 
+#[derive(Debug)]
+pub struct Player {
+    pub entity: EntityId,
+}
+
+pub type PlayerAction = Action;
+
 #[derive(Default)]
 pub struct Entities {
+    id_gen: IdGenerator,
     ids: HashSet<EntityId>,
+    pub positions: HashMap<EntityId, vec2<Coord>>,
 }
 
 pub type Time = R32;
@@ -34,24 +43,29 @@ pub enum Effect {
     Noop,
 }
 
+#[derive(Debug, Clone)]
 pub enum Action {
     Move(ActionMove),
     UseItem(ActionUseItem),
 }
 
+#[derive(Debug, Clone)]
 pub struct ActionUseItem {
     pub item: ItemId,
 }
 
+#[derive(Debug, Clone)]
 pub enum ActionMove {
     Slide(MoveSlide),
     Teleport(MoveTeleport),
 }
 
+#[derive(Debug, Clone)]
 pub struct MoveSlide {
     pub delta: vec2<Coord>,
 }
 
+#[derive(Debug, Clone)]
 pub struct MoveTeleport {
     pub target: vec2<Coord>,
 }
@@ -66,10 +80,13 @@ impl World {
             ticks_per_beat: music_config.ticks_per_beat,
             ..default()
         };
+        let mut entities = Entities::new();
+        let player = entities.spawn();
+        entities.positions.insert(player, vec2::ZERO);
         Self {
             geng: geng.clone(),
-            id_gen: IdGenerator::new(),
-            entities: Entities::new(),
+            player: Player::new(player),
+            entities,
             items: Collection::new(),
             music_controller: MusicController::new(
                 music_config,
@@ -80,11 +97,14 @@ impl World {
         }
     }
 
-    pub fn player_beat(&mut self) {
+    pub fn player_action(&mut self, action: PlayerAction) {
         let ticks = self.beat_controller.player_beat();
         for _ in 0..ticks {
             self.music_controller.tick();
         }
+
+        // TODO: validate action
+        self.entity_action(self.player.entity, action);
     }
 
     pub fn update(&mut self, delta_time: Time) {
@@ -100,17 +120,52 @@ impl World {
         }
     }
 
-    fn entity_action(&self, entity: EntityId) -> Action {
-        todo!()
+    fn entity_action(&mut self, entity: EntityId, action: Action) {
+        if !self.entities.ids.contains(&entity) {
+            panic!("Unexistent entity tried to do an action: {entity:?} - {action:?}");
+        }
+
+        match action {
+            Action::Move(action) => self.entity_move(entity, action),
+            Action::UseItem(action) => self.entity_use_item(entity, action),
+        }
     }
 
-    fn move_entity(&mut self, entity: EntityId, move_action: ActionMove) {
+    fn entity_move(&mut self, entity: EntityId, move_action: ActionMove) {
+        let pos = self.entities.positions.get_mut(&entity).unwrap_or_else(|| {
+            panic!("Tried to move entity without position component: {entity:?} - {move_action:?}")
+        });
+        match move_action {
+            ActionMove::Slide(slide) => {
+                // TODO: check collision
+                *pos += slide.delta;
+            }
+            ActionMove::Teleport(tp) => {
+                // TODO: check collision
+                *pos = tp.target;
+            }
+        }
+    }
+
+    fn entity_use_item(&mut self, entity: EntityId, use_action: ActionUseItem) {
         todo!()
     }
 }
 
 impl Entities {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn spawn(&mut self) -> EntityId {
+        let id = self.id_gen.next();
+        self.ids.insert(id);
+        id
+    }
+}
+
+impl Player {
+    pub fn new(entity_id: EntityId) -> Self {
+        Self { entity: entity_id }
     }
 }
