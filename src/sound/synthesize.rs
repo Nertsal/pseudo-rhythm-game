@@ -1,8 +1,10 @@
 use rodio::Source;
 use rustysynth::Synthesizer;
 
-use crate::config::{Note, Ticks};
-use crate::source::RawSource;
+use super::{
+    config::{Note, Ticks},
+    source::RawSource,
+};
 
 pub fn synthesize_note(
     note: Note,

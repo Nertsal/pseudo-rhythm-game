@@ -1,37 +1,33 @@
-use super::*;
+use geng::prelude::*;
 
-use beat_controller::BeatController;
-use config::MusicConfig;
-use music_controller::MusicController;
+use crate::{
+    assets::Assets,
+    sound::{MusicConfig, SectionName, Synthesizer},
+    world::World,
+};
 
-pub struct State {
-    geng: Geng,
-    assets: Rc<Assets>,
-    beat_controller: BeatController,
-    music_controller: MusicController,
+pub struct Game {
+    pub geng: Geng,
+    pub assets: Rc<Assets>,
+    pub world: World,
 }
 
-impl State {
+impl Game {
     pub fn new(
         geng: &Geng,
         assets: &Rc<Assets>,
-        config: MusicConfig,
-        synthesizers: HashMap<config::SectionName, rustysynth::Synthesizer>,
+        music_config: MusicConfig,
+        synthesizers: HashMap<SectionName, Synthesizer>,
     ) -> Self {
-        let beat_config = beat_controller::BeatControllerConfig {
-            ticks_per_beat: config.ticks_per_beat,
-            ..default()
-        };
         Self {
             geng: geng.clone(),
             assets: assets.clone(),
-            beat_controller: BeatController::new(beat_config),
-            music_controller: MusicController::new(config, 50.0, synthesizers),
+            world: World::new(geng, music_config, synthesizers),
         }
     }
 }
 
-impl geng::State for State {
+impl geng::State for Game {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
     }
@@ -39,24 +35,14 @@ impl geng::State for State {
     fn update(&mut self, delta_time: f64) {
         let delta_time = delta_time as f32;
 
-        let ticks = self.beat_controller.update(delta_time);
-        self.music_controller
-            .set_bpm(self.beat_controller.get_bpm());
-        for _ in 0..ticks {
-            self.music_controller.tick();
-        }
+        let delta_time = crate::world::Time::new(delta_time);
 
-        for sound in self.music_controller.update(delta_time) {
-            geng::SoundEffect::from_source(&self.geng, sound).play();
-        }
+        self.world.update(delta_time);
     }
 
     fn handle_event(&mut self, event: geng::Event) {
         if let geng::Event::KeyDown { key: geng::Key::S } = event {
-            let ticks = self.beat_controller.player_beat();
-            for _ in 0..ticks {
-                self.music_controller.tick();
-            }
+            self.world.player_beat();
         }
     }
 
@@ -64,7 +50,7 @@ impl geng::State for State {
         use geng::ui::*;
 
         geng::ui::stack![geng::ui::Text::new(
-            format!("BPM: {:.0}", self.beat_controller.get_bpm()),
+            format!("BPM: {:.0}", self.world.beat_controller.get_bpm()),
             self.geng.default_font().clone(),
             10.0,
             Rgba::WHITE
@@ -83,7 +69,7 @@ pub fn run(geng: &Geng) -> impl geng::State {
                 .await
                 .expect("Failed to load assets");
 
-            let config: config::MusicConfig =
+            let config: MusicConfig =
                 geng::LoadAsset::load(&geng, &run_dir().join("assets").join("config.json"))
                     .await
                     .expect("Failed to load music config");
@@ -110,7 +96,7 @@ pub fn run(geng: &Geng) -> impl geng::State {
                 synthesizers.insert(section_name.to_owned(), synthesizer);
             }
 
-            State::new(&geng, &assets, config, synthesizers)
+            Game::new(&geng, &assets, config, synthesizers)
         }
     };
     geng::LoadingScreen::new(geng, geng::EmptyLoadingScreen::new(geng), future)

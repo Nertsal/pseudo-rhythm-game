@@ -1,15 +1,10 @@
 use geng::prelude::*;
 
-mod beat_controller;
-mod config;
-mod music_controller;
-mod sound_queue;
-mod source;
-mod state;
-mod synthesize;
-
-#[derive(geng::Assets)]
-pub struct Assets {}
+mod assets;
+mod game;
+mod id;
+mod sound;
+mod world;
 
 fn main() {
     logger::init();
@@ -20,5 +15,5 @@ fn main() {
         ..default()
     });
 
-    geng.clone().run(state::run(&geng))
+    geng.clone().run(game::run(&geng))
 }

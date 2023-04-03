@@ -1,9 +1,14 @@
+use std::collections::HashMap;
+
+use geng::prelude::{thread_rng, IteratorRandom};
 use rustysynth::Synthesizer;
 
-use super::*;
-use config::*;
-use sound_queue::SoundQueue;
-use source::{IntoRawSource, RawSource};
+use super::{
+    config::*,
+    sound_queue::SoundQueue,
+    source::{IntoRawSource, RawSource},
+    synthesize,
+};
 
 pub struct MusicController {
     config: MusicConfig,

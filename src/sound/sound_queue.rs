@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use rodio::Source;
 
-use crate::source::{IntoRawSource, RawSource};
+use super::source::{IntoRawSource, RawSource};
 
 const EARLY_PLAY: f32 = 0.5;
 

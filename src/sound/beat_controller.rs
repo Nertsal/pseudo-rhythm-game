@@ -1,7 +1,7 @@
-use crate::config::Ticks;
+use super::config::Ticks;
 
 #[derive(Debug, Clone)]
-pub struct BeatControllerConfig {
+pub struct BeatConfig {
     pub bpm_min: Ticks,
     pub bpm_max: Ticks,
     pub ticks_per_beat: Ticks,
@@ -12,7 +12,7 @@ pub struct BeatControllerConfig {
 #[derive(Debug, Clone)]
 pub struct BeatController {
     /// Controller configuration.
-    config: BeatControllerConfig,
+    config: BeatConfig,
     /// The time since last beat.
     last_beat: f32,
     /// The time since last player's beat event.
@@ -30,7 +30,7 @@ pub struct BeatController {
 }
 
 impl BeatController {
-    pub fn new(config: BeatControllerConfig) -> Self {
+    pub fn new(config: BeatConfig) -> Self {
         Self {
             last_beat: 0.0,
             last_player_beat: 0.0,
@@ -133,7 +133,7 @@ impl BeatController {
     }
 }
 
-impl Default for BeatControllerConfig {
+impl Default for BeatConfig {
     fn default() -> Self {
         Self {
             bpm_min: 30,
@@ -145,7 +145,7 @@ impl Default for BeatControllerConfig {
     }
 }
 
-fn tween_bpm(current: f32, target: f32, config: &BeatControllerConfig) -> f32 {
+fn tween_bpm(current: f32, target: f32, config: &BeatConfig) -> f32 {
     let alpha = 0.5;
     ((1.0 - alpha) * current + alpha * target).clamp(config.bpm_min as f32, config.bpm_max as f32)
 }

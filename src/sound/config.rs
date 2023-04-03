@@ -1,6 +1,5 @@
+use geng::prelude::*;
 use std::collections::VecDeque;
-
-use super::*;
 
 pub type SFName = String;
 pub type SectionName = String;
