@@ -6,6 +6,8 @@ use crate::{
     world::{ActionMove, MoveSlide, PlayerAction, World},
 };
 
+mod draw;
+
 pub struct Game {
     geng: Geng,
     assets: Rc<Assets>,
@@ -43,21 +45,7 @@ impl Game {
 impl geng::State for Game {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
-
-        let radius = self.grid.cell_size.x.min(self.grid.cell_size.y) / 2.0;
-        for (&id, &pos) in &self.world.entities.positions {
-            let pos = self.grid.grid_to_world(pos);
-            let color = if id == self.world.player.entity {
-                Rgba::GREEN
-            } else {
-                Rgba::RED
-            };
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Ellipse::circle(pos, radius, color),
-            );
-        }
+        self.draw(framebuffer)
     }
 
     fn update(&mut self, delta_time: f64) {
