@@ -8,7 +8,7 @@ pub fn report_err<T, E: Display>(result: Result<T, E>) {
 
 /// Normalizes arbitrary vector to one of 9 possible directions from the grid.
 pub fn vec_to_dir(vec: vec2<f32>) -> vec2<i64> {
-    let tangent = vec.x.abs() / vec.y.abs().max(1e-2);
+    let tangent = vec.y.abs() / vec.x.abs().max(1e-2);
     if tangent < 0.41 {
         // Horizontal
         vec2::UNIT_X * vec.x.signum() as i64
