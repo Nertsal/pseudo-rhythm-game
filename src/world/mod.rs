@@ -66,9 +66,8 @@ impl World {
         let mut entities = Entities::new();
 
         let player = entities.spawn();
-        entities.position.insert(player, vec2::ZERO).unwrap();
 
-        Self {
+        let mut world = Self {
             geng: geng.clone(),
             player: Player::new(player),
             entities,
@@ -79,7 +78,25 @@ impl World {
                 synthesizers,
             ),
             beat_controller: BeatController::new(beat_config),
-        }
+        };
+        world.init();
+        world
+    }
+
+    fn init(&mut self) {
+        let player = self.player.entity;
+        self.entities.position.insert(player, vec2::ZERO).unwrap();
+        self.entities
+            .health
+            .insert(player, Health::new(Hp::new(10.0)))
+            .unwrap();
+
+        let enemy = self.entities.spawn();
+        self.entities.position.insert(enemy, vec2(2, 1)).unwrap();
+        self.entities
+            .health
+            .insert(enemy, Health::new(Hp::new(2.0)))
+            .unwrap();
     }
 
     pub fn player_action(&mut self, action: PlayerAction) -> SystemResult<()> {
@@ -115,17 +132,54 @@ impl World {
     }
 
     fn entity_move(&mut self, entity: EntityId, move_action: ActionMove) -> SystemResult<()> {
-        let pos = self.entities.position.get_mut(entity)?;
         match move_action {
-            ActionMove::Slide(slide) => {
-                // TODO: check collision
-                *pos += slide.delta;
-            }
-            ActionMove::Teleport(tp) => {
-                // TODO: check collision
-                *pos = tp.target;
+            ActionMove::Slide(slide) => self.entity_slide(entity, slide),
+            ActionMove::Teleport(_tp) => {
+                todo!()
             }
         }
+    }
+
+    fn entity_slide(&mut self, entity: EntityId, slide: MoveSlide) -> SystemResult<()> {
+        if slide.delta.x.abs() + slide.delta.y.abs() != 1 {
+            // TODO
+            todo!("Only single-tile axis-aligned slide move implemented");
+        }
+
+        let &pos = self.entities.position.get(entity)?;
+
+        let target = pos + slide.delta;
+
+        let other = self
+            .entities
+            .position
+            .iter()
+            .find(|(_, &pos)| pos == target);
+        if let Some((other, _)) = other {
+            self.contact_damage(entity, other)?;
+            return Ok(());
+        }
+
+        self.entities.position.update(entity, target)?;
+        Ok(())
+    }
+
+    fn contact_damage(&mut self, entity_a: EntityId, entity_b: EntityId) -> SystemResult<()> {
+        // TODO: customize damage
+        self.entity_damage(entity_a, Hp::new(1.0))?;
+        self.entity_damage(entity_b, Hp::new(1.0))?;
+        Ok(())
+    }
+
+    fn entity_damage(&mut self, entity: EntityId, damage: Hp) -> SystemResult<()> {
+        let health = self.entities.health.get_mut(entity)?;
+        health.damage(damage);
+        if health.is_dead() {
+            // Entity died
+            // TODO: death effect
+            self.entities.remove(entity);
+        }
+
         Ok(())
     }
 

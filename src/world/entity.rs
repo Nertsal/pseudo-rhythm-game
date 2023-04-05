@@ -14,6 +14,10 @@ impl Entities {
         Self::default()
     }
 
+    pub fn contains(&self, id: EntityId) -> bool {
+        self.ids.get(id).is_ok()
+    }
+
     pub fn spawn(&mut self) -> EntityId {
         let id = self.id_gen.next();
         self.ids

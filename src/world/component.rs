@@ -36,7 +36,7 @@ impl<T> ComponentStorage<T> {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (EntityId, &T)> {
+    pub fn iter<'a>(&self) -> impl Iterator<Item = (EntityId, &T)> {
         comp_iter!(self.inner.iter())
     }
 
