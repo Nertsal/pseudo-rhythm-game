@@ -5,11 +5,21 @@ use crate::{
     sound::{BeatConfig, BeatController, MusicConfig, MusicController, SectionName, Synthesizer},
 };
 
+mod action;
 mod component;
+mod entity;
 mod health;
+mod player;
 
+pub use action::*;
 pub use component::*;
+pub use entity::*;
 pub use health::*;
+pub use player::*;
+
+pub type Time = R32;
+pub type ItemId = Id;
+pub type Coord = i64;
 
 pub struct World {
     pub geng: Geng,
@@ -20,29 +30,14 @@ pub struct World {
     pub music_controller: MusicController,
 }
 
-#[derive(Debug)]
-pub struct Player {
-    pub entity: EntityId,
+#[derive(HasId)]
+pub struct Item {
+    pub id: ItemId,
+    pub on_use: Effect,
 }
 
-pub type PlayerAction = Action;
-
-pub struct Entities {
-    id_gen: IdGenerator,
-    ids: ComponentStorage<()>,
-    pub position: ComponentStorage<vec2<Coord>>,
-    pub health: ComponentStorage<Health>,
-}
-
-impl Default for Entities {
-    fn default() -> Self {
-        Self {
-            id_gen: default(),
-            ids: ComponentStorage::new("Id"),
-            position: ComponentStorage::new("Position"),
-            health: ComponentStorage::new("Health"),
-        }
-    }
+pub enum Effect {
+    Noop,
 }
 
 pub type SystemResult<T> = Result<T, SystemError>;
@@ -56,48 +51,6 @@ impl From<ComponentError> for SystemError {
     fn from(value: ComponentError) -> Self {
         Self::Component(value)
     }
-}
-
-pub type Time = R32;
-pub type EntityId = Id;
-pub type ItemId = Id;
-pub type Coord = i64;
-
-#[derive(HasId)]
-pub struct Item {
-    pub id: ItemId,
-    pub on_use: Effect,
-}
-
-pub enum Effect {
-    Noop,
-}
-
-#[derive(Debug, Clone)]
-pub enum Action {
-    Move(ActionMove),
-    UseItem(ActionUseItem),
-}
-
-#[derive(Debug, Clone)]
-pub struct ActionUseItem {
-    pub item: ItemId,
-}
-
-#[derive(Debug, Clone)]
-pub enum ActionMove {
-    Slide(MoveSlide),
-    Teleport(MoveTeleport),
-}
-
-#[derive(Debug, Clone)]
-pub struct MoveSlide {
-    pub delta: vec2<Coord>,
-}
-
-#[derive(Debug, Clone)]
-pub struct MoveTeleport {
-    pub target: vec2<Coord>,
 }
 
 impl World {
@@ -153,7 +106,7 @@ impl World {
     }
 
     fn entity_action(&mut self, entity: EntityId, action: Action) -> SystemResult<()> {
-        self.entities.ids.get(entity)?;
+        // self.entities.ids.get(entity)?;
 
         match action {
             Action::Move(action) => self.entity_move(entity, action),
@@ -178,31 +131,5 @@ impl World {
 
     fn entity_use_item(&mut self, entity: EntityId, use_action: ActionUseItem) -> SystemResult<()> {
         todo!()
-    }
-}
-
-impl Entities {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn spawn(&mut self) -> EntityId {
-        let id = self.id_gen.next();
-        self.ids
-            .insert(id, ())
-            .expect("Failed to generate a unique id");
-        id
-    }
-
-    pub fn remove(&mut self, id: EntityId) -> bool {
-        let _ = self.position.remove(id);
-        let _ = self.health.remove(id);
-        self.ids.remove(id).is_ok()
-    }
-}
-
-impl Player {
-    pub fn new(entity_id: EntityId) -> Self {
-        Self { entity: entity_id }
     }
 }
