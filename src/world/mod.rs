@@ -113,7 +113,7 @@ impl World {
         let mut entities = Entities::new();
 
         let player = entities.spawn();
-        // entities.position.insert(player, vec2::ZERO).unwrap();
+        entities.position.insert(player, vec2::ZERO).unwrap();
 
         Self {
             geng: geng.clone(),
