@@ -66,8 +66,10 @@ impl geng::State for Game {
                 _ => None,
             };
             if let Some(delta) = delta {
+                // TODO: handle error
                 self.world
-                    .player_action(PlayerAction::Move(ActionMove::Slide(MoveSlide { delta })));
+                    .player_action(PlayerAction::Move(ActionMove::Slide(MoveSlide { delta })))
+                    .unwrap();
             }
         }
     }

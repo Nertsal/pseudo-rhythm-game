@@ -5,8 +5,10 @@ use crate::{
     sound::{BeatConfig, BeatController, MusicConfig, MusicController, SectionName, Synthesizer},
 };
 
+mod component;
 mod health;
 
+pub use component::*;
 pub use health::*;
 
 pub struct World {
@@ -25,14 +27,35 @@ pub struct Player {
 
 pub type PlayerAction = Action;
 
-type Components<T> = HashMap<EntityId, T>;
-
-#[derive(Default)]
 pub struct Entities {
     id_gen: IdGenerator,
-    ids: HashSet<EntityId>,
-    pub position: Components<vec2<Coord>>,
-    pub health: Components<Health>,
+    ids: ComponentStorage<()>,
+    pub position: ComponentStorage<vec2<Coord>>,
+    pub health: ComponentStorage<Health>,
+}
+
+impl Default for Entities {
+    fn default() -> Self {
+        Self {
+            id_gen: default(),
+            ids: ComponentStorage::new("Id"),
+            position: ComponentStorage::new("Position"),
+            health: ComponentStorage::new("Health"),
+        }
+    }
+}
+
+pub type SystemResult<T> = Result<T, SystemError>;
+
+#[derive(Debug, Clone)]
+pub enum SystemError {
+    Component(ComponentError),
+}
+
+impl From<ComponentError> for SystemError {
+    fn from(value: ComponentError) -> Self {
+        Self::Component(value)
+    }
 }
 
 pub type Time = R32;
@@ -90,7 +113,7 @@ impl World {
         let mut entities = Entities::new();
 
         let player = entities.spawn();
-        entities.position.insert(player, vec2::ZERO);
+        // entities.position.insert(player, vec2::ZERO).unwrap();
 
         Self {
             geng: geng.clone(),
@@ -106,14 +129,14 @@ impl World {
         }
     }
 
-    pub fn player_action(&mut self, action: PlayerAction) {
+    pub fn player_action(&mut self, action: PlayerAction) -> SystemResult<()> {
         let ticks = self.beat_controller.player_beat();
         for _ in 0..ticks {
             self.music_controller.tick();
         }
 
         // TODO: validate action
-        self.entity_action(self.player.entity, action);
+        self.entity_action(self.player.entity, action)
     }
 
     pub fn update(&mut self, delta_time: Time) {
@@ -129,10 +152,8 @@ impl World {
         }
     }
 
-    fn entity_action(&mut self, entity: EntityId, action: Action) {
-        if !self.entities.ids.contains(&entity) {
-            panic!("Unexistent entity tried to do an action: {entity:?} - {action:?}");
-        }
+    fn entity_action(&mut self, entity: EntityId, action: Action) -> SystemResult<()> {
+        self.entities.ids.get(entity)?;
 
         match action {
             Action::Move(action) => self.entity_move(entity, action),
@@ -140,10 +161,8 @@ impl World {
         }
     }
 
-    fn entity_move(&mut self, entity: EntityId, move_action: ActionMove) {
-        let pos = self.entities.position.get_mut(&entity).unwrap_or_else(|| {
-            panic!("Tried to move entity without position component: {entity:?} - {move_action:?}")
-        });
+    fn entity_move(&mut self, entity: EntityId, move_action: ActionMove) -> SystemResult<()> {
+        let pos = self.entities.position.get_mut(entity)?;
         match move_action {
             ActionMove::Slide(slide) => {
                 // TODO: check collision
@@ -154,9 +173,10 @@ impl World {
                 *pos = tp.target;
             }
         }
+        Ok(())
     }
 
-    fn entity_use_item(&mut self, entity: EntityId, use_action: ActionUseItem) {
+    fn entity_use_item(&mut self, entity: EntityId, use_action: ActionUseItem) -> SystemResult<()> {
         todo!()
     }
 }
@@ -168,15 +188,16 @@ impl Entities {
 
     pub fn spawn(&mut self) -> EntityId {
         let id = self.id_gen.next();
-        self.ids.insert(id);
+        self.ids
+            .insert(id, ())
+            .expect("Failed to generate a unique id");
         id
     }
 
     pub fn remove(&mut self, id: EntityId) -> bool {
-        let id = &id;
-        self.position.remove(id);
-        self.health.remove(id);
-        self.ids.remove(id)
+        let _ = self.position.remove(id);
+        let _ = self.health.remove(id);
+        self.ids.remove(id).is_ok()
     }
 }
 
