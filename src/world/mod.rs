@@ -5,6 +5,10 @@ use crate::{
     sound::{BeatConfig, BeatController, MusicConfig, MusicController, SectionName, Synthesizer},
 };
 
+mod health;
+
+pub use health::*;
+
 pub struct World {
     pub geng: Geng,
     pub player: Player,
@@ -21,11 +25,14 @@ pub struct Player {
 
 pub type PlayerAction = Action;
 
+type Components<T> = HashMap<EntityId, T>;
+
 #[derive(Default)]
 pub struct Entities {
     id_gen: IdGenerator,
     ids: HashSet<EntityId>,
-    pub positions: HashMap<EntityId, vec2<Coord>>,
+    pub position: Components<vec2<Coord>>,
+    pub health: Components<Health>,
 }
 
 pub type Time = R32;
@@ -81,8 +88,10 @@ impl World {
             ..default()
         };
         let mut entities = Entities::new();
+
         let player = entities.spawn();
-        entities.positions.insert(player, vec2::ZERO);
+        entities.position.insert(player, vec2::ZERO);
+
         Self {
             geng: geng.clone(),
             player: Player::new(player),
@@ -132,7 +141,7 @@ impl World {
     }
 
     fn entity_move(&mut self, entity: EntityId, move_action: ActionMove) {
-        let pos = self.entities.positions.get_mut(&entity).unwrap_or_else(|| {
+        let pos = self.entities.position.get_mut(&entity).unwrap_or_else(|| {
             panic!("Tried to move entity without position component: {entity:?} - {move_action:?}")
         });
         match move_action {
@@ -161,6 +170,13 @@ impl Entities {
         let id = self.id_gen.next();
         self.ids.insert(id);
         id
+    }
+
+    pub fn remove(&mut self, id: EntityId) -> bool {
+        let id = &id;
+        self.position.remove(id);
+        self.health.remove(id);
+        self.ids.remove(id)
     }
 }
 

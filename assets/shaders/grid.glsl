@@ -27,7 +27,7 @@ void main() {
     mat3 screen_to_grid = inverse(u_projection_matrix * u_view_matrix * u_grid_matrix);
     vec2 grid_pos = into_2d(vec3(v_pos, 1.0) * screen_to_grid);
 
-    ivec2 grid_ipos = ivec2(floor(grid_pos - 0.5));
+    ivec2 grid_ipos = ivec2(floor(grid_pos + 0.5));
 
     // let mut cell_pos = vec2(offset.x.trunc() as _, offset.y.trunc() as _);
     // offset = vec2(offset.x.fract(), offset.y.fract());
