@@ -3,7 +3,7 @@ use geng::{prelude::*, Camera2d};
 use crate::{
     assets::Assets,
     sound::{MusicConfig, SectionName, Synthesizer},
-    world::{ActionMove, MoveSlide, PlayerAction, World},
+    world::*,
 };
 
 mod draw;
@@ -14,6 +14,8 @@ pub struct Game {
     world: World,
     grid: Grid,
     camera: Camera2d,
+    framebuffer_size: vec2<usize>,
+    cursor_world_pos: vec2<f32>,
 }
 
 struct Grid {
@@ -38,12 +40,33 @@ impl Game {
                 rotation: 0.0,
                 fov: 30.0,
             },
+            framebuffer_size: vec2(1, 1),
+            cursor_world_pos: vec2::ZERO,
+        }
+    }
+
+    fn action(&mut self, action: PlayerAction) {
+        let result = self.world.player_action(action, self.get_action_input());
+        crate::util::report_err(result);
+    }
+
+    fn update_cursor(&mut self, cursor_pos: vec2<f64>) {
+        self.cursor_world_pos = self.camera.screen_to_world(
+            self.framebuffer_size.map(|x| x as f32),
+            cursor_pos.map(|x| x as f32),
+        );
+    }
+
+    fn get_action_input(&self) -> ActionInput {
+        ActionInput {
+            target_pos: self.grid.world_to_grid(self.cursor_world_pos).0,
         }
     }
 }
 
 impl geng::State for Game {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
+        self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
         self.draw(framebuffer)
     }
@@ -57,20 +80,31 @@ impl geng::State for Game {
     }
 
     fn handle_event(&mut self, event: geng::Event) {
-        if let geng::Event::KeyDown { key } = event {
-            let delta = match key {
-                geng::Key::W => Some(vec2(0, 1)),
-                geng::Key::S => Some(vec2(0, -1)),
-                geng::Key::A => Some(vec2(-1, 0)),
-                geng::Key::D => Some(vec2(1, 0)),
-                _ => None,
-            };
-            if let Some(delta) = delta {
-                // TODO: handle error
-                self.world
-                    .player_action(PlayerAction::Move(ActionMove::Slide(MoveSlide { delta })))
-                    .unwrap();
+        match event {
+            geng::Event::KeyDown { key } => {
+                let delta = match key {
+                    geng::Key::W => Some(vec2(0, 1)),
+                    geng::Key::S => Some(vec2(0, -1)),
+                    geng::Key::A => Some(vec2(-1, 0)),
+                    geng::Key::D => Some(vec2(1, 0)),
+                    _ => None,
+                };
+                if let Some(delta) = delta {
+                    self.action(PlayerAction::Move(ActionMove::Slide(MoveSlide { delta })));
+                }
             }
+            geng::Event::MouseDown { button, .. } => {
+                let item = match button {
+                    geng::MouseButton::Left => ItemId::RightHand,
+                    geng::MouseButton::Right => ItemId::LeftHand,
+                    geng::MouseButton::Middle => return,
+                };
+                self.action(PlayerAction::UseItem(ActionUseItem { item }));
+            }
+            geng::Event::MouseMove { position, .. } => {
+                self.update_cursor(position);
+            }
+            _ => (),
         }
     }
 
@@ -105,16 +139,8 @@ impl Grid {
         // (world_pos / self.cell_size).map(|x| x.floor() as i64)
         let grid_pos = self.matrix() * world_pos.extend(1.0);
         let mut offset = grid_pos.into_2d();
-        let mut cell_pos = vec2(offset.x.trunc() as _, offset.y.trunc() as _);
+        let cell_pos = vec2(offset.x.floor() as _, offset.y.floor() as _);
         offset = vec2(offset.x.fract(), offset.y.fract());
-        if offset.x < 0.0 {
-            offset.x += 1.0;
-            cell_pos.x -= 1;
-        }
-        if offset.y < 0.0 {
-            offset.y += 1.0;
-            cell_pos.y -= 1;
-        }
         (cell_pos, offset)
     }
 }

@@ -30,7 +30,7 @@ impl Game {
 
         let radius = self.grid.cell_size.x.min(self.grid.cell_size.y) / 2.0;
         for (id, &pos) in self.world.entities.position.iter() {
-            let pos = self.grid.grid_to_world(pos);
+            let pos = self.grid.grid_to_world(pos) + self.grid.cell_size / 2.0;
             let color = if id == self.world.player.entity {
                 Rgba::GREEN
             } else {

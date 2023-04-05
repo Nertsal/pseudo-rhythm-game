@@ -4,6 +4,7 @@ mod assets;
 mod game;
 mod id;
 mod sound;
+mod util;
 mod world;
 
 fn main() {

@@ -44,6 +44,10 @@ impl<T> ComponentStorage<T> {
         comp_iter!(self.inner.iter_mut())
     }
 
+    pub fn contains(&self, id: EntityId) -> bool {
+        self.inner.contains_key(&id)
+    }
+
     pub fn get(&self, id: EntityId) -> ComponentResult<&T> {
         option_comp_result(id, &self.name, self.inner.get(&id))
     }

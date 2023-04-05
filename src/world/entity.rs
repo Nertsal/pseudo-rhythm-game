@@ -7,15 +7,12 @@ pub struct Entities {
     ids: ComponentStorage<()>,
     pub position: ComponentStorage<vec2<Coord>>,
     pub health: ComponentStorage<Health>,
+    pub held_items: ComponentStorage<HeldItems>,
 }
 
 impl Entities {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    pub fn contains(&self, id: EntityId) -> bool {
-        self.ids.get(id).is_ok()
     }
 
     pub fn spawn(&mut self) -> EntityId {
@@ -29,6 +26,7 @@ impl Entities {
     pub fn remove(&mut self, id: EntityId) -> bool {
         let _ = self.position.remove(id);
         let _ = self.health.remove(id);
+        let _ = self.held_items.remove(id);
         self.ids.remove(id).is_ok()
     }
 }
@@ -40,6 +38,7 @@ impl Default for Entities {
             ids: ComponentStorage::new("Id"),
             position: ComponentStorage::new("Position"),
             health: ComponentStorage::new("Health"),
+            held_items: ComponentStorage::new("HeldItems"),
         }
     }
 }

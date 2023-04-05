@@ -1,6 +1,11 @@
 use super::*;
 
 #[derive(Debug, Clone)]
+pub struct ActionInput {
+    pub target_pos: vec2<Coord>,
+}
+
+#[derive(Debug, Clone)]
 pub enum Action {
     Move(ActionMove),
     UseItem(ActionUseItem),
