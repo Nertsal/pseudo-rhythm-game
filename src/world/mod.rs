@@ -2,7 +2,9 @@ use geng::prelude::*;
 
 use crate::{
     id::{Id, IdGenerator},
-    sound::{BeatConfig, BeatController, MusicConfig, MusicController, SectionName, Synthesizer},
+    sound::{
+        BeatConfig, BeatController, MusicConfig, MusicController, SectionName, Synthesizer, Ticks,
+    },
 };
 
 mod action;
@@ -16,6 +18,8 @@ mod health;
 mod item;
 mod logic;
 mod player;
+mod target;
+mod unit;
 
 pub use action::*;
 pub use action_effect::*;
@@ -28,6 +32,8 @@ pub use health::*;
 pub use item::*;
 pub use logic::*;
 pub use player::*;
+pub use target::*;
+pub use unit::*;
 
 pub type Time = R32;
 pub type Coord = i64;
@@ -49,12 +55,7 @@ pub type SystemResult<T> = Result<T, SystemError>;
 pub enum SystemError {
     Component(ComponentError),
     Context(ContextError),
-}
-
-impl From<ComponentError> for SystemError {
-    fn from(value: ComponentError) -> Self {
-        Self::Component(value)
-    }
+    Behaviour(BehaviourError),
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +63,12 @@ pub struct Particle {
     pub lifetime: Health,
     /// Diameter.
     pub size: FCoord,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Fraction {
+    Player,
+    Enemy,
 }
 
 impl World {
@@ -105,6 +112,10 @@ impl World {
             .insert(player, Health::new(Hp::new(10.0)))
             .unwrap();
         self.entities
+            .fraction
+            .insert(player, Fraction::Player)
+            .unwrap();
+        self.entities
             .held_items
             .insert(
                 player,
@@ -128,6 +139,65 @@ impl World {
             .health
             .insert(enemy, Health::new(Hp::new(2.0)))
             .unwrap();
+        self.entities
+            .fraction
+            .insert(enemy, Fraction::Enemy)
+            .unwrap();
+        self.entities
+            .held_items
+            .insert(
+                enemy,
+                HeldItems {
+                    left_hand: None,
+                    right_hand: Some(Item {
+                        on_use: ActionEffect::MeleeAttack {
+                            damage: Hp::new(1.0),
+                        },
+                    }),
+                },
+            )
+            .unwrap();
+        self.entities
+            .unit
+            .insert(
+                enemy,
+                Unit {
+                    beat: UnitBeat::Independent { bpm: 100 },
+                    next_beat: Time::ONE,
+                    behaviour: UnitBehaviour::SelectTarget {
+                        selector: TargetSelector {
+                            filter: TargetFilter::Fraction(FractionFilter::Enemy),
+                            fitness: TargetFitness::Negative(Box::new(TargetFitness::Distance)),
+                        },
+                        then_behave: Box::new(UnitBehaviour::If {
+                            condition: BehaviourCondition::TargetInRange { distance: 1 },
+                            then_behave: Box::new(UnitBehaviour::UseItemOnTarget {
+                                item: ItemId::RightHand,
+                            }),
+                            else_behave: Box::new(UnitBehaviour::MoveToTarget),
+                        }),
+                    },
+                },
+            )
+            .unwrap()
+    }
+}
+
+impl From<ComponentError> for SystemError {
+    fn from(value: ComponentError) -> Self {
+        Self::Component(value)
+    }
+}
+
+impl From<ContextError> for SystemError {
+    fn from(value: ContextError) -> Self {
+        Self::Context(value)
+    }
+}
+
+impl From<BehaviourError> for SystemError {
+    fn from(value: BehaviourError) -> Self {
+        Self::Behaviour(value)
     }
 }
 
@@ -136,6 +206,7 @@ impl Display for SystemError {
         match self {
             SystemError::Component(error) => write!(f, "Component error: {error}"),
             SystemError::Context(error) => write!(f, "Context error: {error}"),
+            SystemError::Behaviour(error) => write!(f, "Behaviour error: {error}"),
         }
     }
 }

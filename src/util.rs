@@ -4,6 +4,10 @@ pub fn smooth_step<T: Float>(t: T) -> T {
     T::from_f32(3.0) * t * t - T::from_f32(2.0) * t * t * t
 }
 
+pub fn king_distance<T: Num + Ord>(vec: vec2<T>) -> T {
+    vec.x.abs().max(vec.y.abs())
+}
+
 pub fn report_err<T, E: Display>(result: Result<T, E>) {
     if let Err(error) = result {
         error!("Error: {error}");

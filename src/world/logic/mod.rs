@@ -10,6 +10,7 @@ struct Logic<'a> {
 impl Logic<'_> {
     pub fn process(&mut self) -> SystemResult<()> {
         self.movement()?;
+        self.process_units()?;
         self.process_particles();
         Ok(())
     }
@@ -19,6 +20,28 @@ impl Logic<'_> {
             let position = self.world.entities.world_position.get_mut(entity)?;
             *position += velocity * self.delta_time;
         }
+        Ok(())
+    }
+
+    fn process_units(&mut self) -> SystemResult<()> {
+        let mut actions = Vec::new();
+        for (id, unit) in self.world.entities.unit.iter_mut() {
+            let bpm = unit.beat.calc_bpm(self.world.beat_controller.get_bpm());
+            let beat_time = Time::new(60.0 / bpm);
+            unit.next_beat -= self.delta_time / beat_time;
+            while unit.next_beat < Time::ZERO {
+                actions.push(id);
+                unit.next_beat += Time::ONE;
+            }
+        }
+
+        for id in actions {
+            let unit = self.world.entities.unit.get(id)?;
+            if let Some((action, input)) = unit.behaviour.evaluate(self.world, id)? {
+                self.world.entity_action(id, action, input)?;
+            }
+        }
+
         Ok(())
     }
 }
@@ -90,9 +113,9 @@ impl World {
     }
 
     fn entity_slide(&mut self, entity: EntityId, slide: MoveSlide) -> SystemResult<()> {
-        if slide.delta.x.abs() + slide.delta.y.abs() != 1 {
+        if slide.delta.x.abs() > 1 || slide.delta.y.abs() > 1 {
             // TODO
-            todo!("Only single-tile axis-aligned slide move implemented");
+            todo!("Only single-tile slide move implemented");
         }
 
         let &pos = self.entities.grid_position.get(entity)?;

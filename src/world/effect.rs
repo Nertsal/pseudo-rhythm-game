@@ -1,17 +1,6 @@
 use super::*;
 
 #[derive(Debug, Clone)]
-pub struct Caster {
-    pub entity: EntityId,
-    // pub item: Option<ItemId>,
-}
-
-#[derive(Debug, Clone)]
-pub enum Target {
-    Entity(EntityId),
-}
-
-#[derive(Debug, Clone)]
 pub enum EffectError {}
 
 #[derive(Debug, Clone)]
@@ -45,10 +34,10 @@ impl Effect {
 impl EffectDamage {
     pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
         let target = context.expect_target()?;
-        let Target::Entity(target) = target;
+        let entity = target.expect_entity()?;
 
         // let &pos = world.entities.grid_position.get(target)?;
-        world.entity_damage(target, self.value)?;
+        world.entity_damage(entity, self.value)?;
         // world.spawn_particles(pos, Color::WHITE)?;
         Ok(())
     }

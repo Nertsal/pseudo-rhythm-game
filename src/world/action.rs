@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub struct ActionInput {
-    pub target_pos: vec2<Coord>,
+    pub target: EffectTarget,
 }
 
 #[derive(Debug, Clone)]
