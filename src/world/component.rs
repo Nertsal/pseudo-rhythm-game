@@ -10,7 +10,7 @@ pub type ComponentResult<T> = Result<T, ComponentError>;
 
 pub type ComponentName = &'static str;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ComponentError {
     NotFound {
         id: EntityId,

@@ -57,7 +57,9 @@ impl Game {
                 .get(id)?
                 .map(FCoord::as_f32);
             let &color = self.world.entities.color.get(id)?;
-            let radius = particle.size.as_f32() / 2.0 * particle.lifetime.get_ratio().as_f32();
+            let t = particle.lifetime.get_ratio().as_f32();
+            let t = crate::util::smooth_step(t);
+            let radius = particle.size.as_f32() / 2.0 * t;
 
             self.geng.draw_2d(
                 framebuffer,

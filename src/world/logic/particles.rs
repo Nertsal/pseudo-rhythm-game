@@ -1,7 +1,12 @@
 use super::*;
 
 impl World {
-    pub fn spawn_particles(&mut self, pos: vec2<FCoord>) -> SystemResult<()> {
+    pub fn spawn_particles(&mut self, pos: vec2<Coord>, color: Color) -> SystemResult<()> {
+        let world_pos = (self.grid.grid_to_world(pos) + self.grid.cell_size / 2.0).map(FCoord::new);
+        self.spawn_particles_world(world_pos, color)
+    }
+
+    pub fn spawn_particles_world(&mut self, pos: vec2<FCoord>, color: Color) -> SystemResult<()> {
         let amount = 5;
         for i in 0..amount {
             let speed = FCoord::new(1.5);
@@ -13,14 +18,14 @@ impl World {
             let id = self.entities.spawn();
             self.entities.world_position.insert(id, pos).unwrap();
             self.entities.velocity.insert(id, velocity).unwrap();
-            self.entities.color.insert(id, Color::BLUE).unwrap();
+            self.entities.color.insert(id, color).unwrap();
             self.entities
                 .particle
                 .insert(
                     id,
                     Particle {
-                        lifetime: Health::new(Time::new(0.2)),
-                        size: FCoord::new(0.2),
+                        lifetime: Health::new(Time::new(0.3)),
+                        size: FCoord::new(0.3),
                     },
                 )
                 .unwrap();

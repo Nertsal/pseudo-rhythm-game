@@ -80,8 +80,12 @@ impl World {
                 todo!()
             }
         }
-        let world_pos = (self.grid.grid_to_world(pos) + self.grid.cell_size / 2.0).map(FCoord::new);
-        self.spawn_particles(world_pos)?;
+
+        if Ok(&pos) != self.entities.grid_position.get(entity) {
+            // Entity actually moved
+            self.spawn_particles(pos, Color::BLUE)?;
+        }
+
         Ok(())
     }
 
@@ -117,6 +121,8 @@ impl World {
     }
 
     pub fn entity_damage(&mut self, entity: EntityId, damage: Hp) -> SystemResult<()> {
+        let &pos = self.entities.grid_position.get(entity)?;
+
         let health = self.entities.health.get_mut(entity)?;
         health.damage(damage);
         if health.is_dead() {
@@ -125,6 +131,7 @@ impl World {
             self.entities.remove(entity);
         }
 
+        self.spawn_particles(pos, Color::WHITE)?;
         Ok(())
     }
 
@@ -141,7 +148,7 @@ impl World {
         };
 
         let action = item.on_use.clone();
-        let (effect, context) = action.to_effect(self, entity, input)?;
+        let (effect, context) = action.into_effect(self, entity, input)?;
         effect.apply(self, context)?;
 
         Ok(())
