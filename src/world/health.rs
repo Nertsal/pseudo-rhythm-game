@@ -17,6 +17,14 @@ impl Health {
         self.hp
     }
 
+    pub fn get_max(&self) -> Hp {
+        self.max_hp
+    }
+
+    pub fn get_ratio(&self) -> R32 {
+        self.hp / self.max_hp
+    }
+
     pub fn is_alive(&self) -> bool {
         self.hp > Hp::ZERO
     }

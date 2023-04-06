@@ -20,13 +20,13 @@ impl ActionEffect {
         match self {
             ActionEffect::MeleeAttack { damage } => {
                 let player = world.player.entity;
-                let &player_pos = world.entities.position.get(player)?;
+                let &player_pos = world.entities.grid_position.get(player)?;
                 let delta = input.target_pos - player_pos;
                 let target = player_pos + crate::util::vec_to_dir(delta.map(|x| x as f32));
 
                 let target = world
                     .entities
-                    .position
+                    .grid_position
                     .iter()
                     .find(|(_, &pos)| pos == target);
                 if let Some((target, _)) = target {

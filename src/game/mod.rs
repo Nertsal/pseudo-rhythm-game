@@ -12,15 +12,9 @@ pub struct Game {
     geng: Geng,
     assets: Rc<Assets>,
     world: World,
-    grid: Grid,
     camera: Camera2d,
     framebuffer_size: vec2<usize>,
     cursor_world_pos: vec2<f32>,
-}
-
-struct Grid {
-    cell_size: vec2<f32>,
-    offset: vec2<f32>,
 }
 
 impl Game {
@@ -34,7 +28,6 @@ impl Game {
             geng: geng.clone(),
             assets: assets.clone(),
             world: World::new(geng, music_config, synthesizers),
-            grid: Grid::default(),
             camera: Camera2d {
                 center: vec2::ZERO,
                 rotation: 0.0,
@@ -59,7 +52,7 @@ impl Game {
 
     fn get_action_input(&self) -> ActionInput {
         ActionInput {
-            target_pos: self.grid.world_to_grid(self.cursor_world_pos).0,
+            target_pos: self.world.grid.world_to_grid(self.cursor_world_pos).0,
         }
     }
 }
@@ -68,7 +61,7 @@ impl geng::State for Game {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
-        self.draw(framebuffer)
+        crate::util::report_err(self.draw(framebuffer));
     }
 
     fn update(&mut self, delta_time: f64) {
@@ -76,7 +69,7 @@ impl geng::State for Game {
 
         let delta_time = crate::world::Time::new(delta_time);
 
-        self.world.update(delta_time);
+        crate::util::report_err(self.world.update(delta_time));
     }
 
     fn handle_event(&mut self, event: geng::Event) {
@@ -120,37 +113,6 @@ impl geng::State for Game {
         .fixed_size(vec2(100.0, 100.0))
         .align(vec2(0.0, 1.0))]
         .boxed()
-    }
-}
-
-impl Grid {
-    pub fn matrix(&self) -> mat3<f32> {
-        mat3::translate(self.offset) * mat3::scale(self.cell_size)
-    }
-
-    pub fn grid_to_world(&self, grid_pos: vec2<i64>) -> vec2<f32> {
-        // self.offset + self.cell_size * grid_pos.map(|x| x as f32)
-        let pos = self.matrix().inverse() * grid_pos.extend(1).map(|x| x as f32);
-        pos.into_2d()
-    }
-
-    /// Returns the grid position and an in-cell offset from the cell pos to `world_pos`.
-    pub fn world_to_grid(&self, world_pos: vec2<f32>) -> (vec2<i64>, vec2<f32>) {
-        // (world_pos / self.cell_size).map(|x| x.floor() as i64)
-        let grid_pos = self.matrix() * world_pos.extend(1.0);
-        let mut offset = grid_pos.into_2d();
-        let cell_pos = vec2(offset.x.floor() as _, offset.y.floor() as _);
-        offset = vec2(offset.x.fract(), offset.y.fract());
-        (cell_pos, offset)
-    }
-}
-
-impl Default for Grid {
-    fn default() -> Self {
-        Self {
-            cell_size: vec2(1.0, 1.0),
-            offset: vec2::ZERO,
-        }
     }
 }
 

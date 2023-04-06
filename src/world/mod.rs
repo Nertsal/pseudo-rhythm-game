@@ -11,6 +11,7 @@ mod component;
 mod context;
 mod effect;
 mod entity;
+mod grid;
 mod health;
 mod item;
 mod logic;
@@ -22,6 +23,7 @@ pub use component::*;
 pub use context::*;
 pub use effect::*;
 pub use entity::*;
+pub use grid::*;
 pub use health::*;
 pub use item::*;
 pub use logic::*;
@@ -29,11 +31,14 @@ pub use player::*;
 
 pub type Time = R32;
 pub type Coord = i64;
+pub type FCoord = R32;
+pub type Color = Rgba<f32>;
 
 pub struct World {
     pub geng: Geng,
-    pub player: Player,
     pub entities: Entities,
+    pub grid: Grid,
+    pub player: Player,
     pub beat_controller: BeatController,
     pub music_controller: MusicController,
 }
@@ -52,6 +57,13 @@ impl From<ComponentError> for SystemError {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Particle {
+    pub lifetime: Health,
+    /// Diameter.
+    pub size: FCoord,
+}
+
 impl World {
     pub fn new(
         geng: &Geng,
@@ -68,8 +80,9 @@ impl World {
 
         let mut world = Self {
             geng: geng.clone(),
-            player: Player::new(player),
             entities,
+            player: Player::new(player),
+            grid: Grid::default(),
             music_controller: MusicController::new(
                 music_config,
                 beat_config.bpm_min as f32,
@@ -83,7 +96,10 @@ impl World {
 
     fn init(&mut self) {
         let player = self.player.entity;
-        self.entities.position.insert(player, vec2::ZERO).unwrap();
+        self.entities
+            .grid_position
+            .insert(player, vec2::ZERO)
+            .unwrap();
         self.entities
             .health
             .insert(player, Health::new(Hp::new(10.0)))
@@ -104,7 +120,10 @@ impl World {
             .unwrap();
 
         let enemy = self.entities.spawn();
-        self.entities.position.insert(enemy, vec2(2, 1)).unwrap();
+        self.entities
+            .grid_position
+            .insert(enemy, vec2(2, 1))
+            .unwrap();
         self.entities
             .health
             .insert(enemy, Health::new(Hp::new(2.0)))
