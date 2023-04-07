@@ -8,13 +8,13 @@ pub struct EffectContext {
 
 #[derive(Debug, Clone)]
 pub struct EffectCaster {
-    pub entity: EntityId,
+    pub unit: UnitId,
     // pub item: Option<ItemId>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum EffectTarget {
-    Entity(EntityId),
+    Unit(UnitId),
     Position(vec2<Coord>),
 }
 
@@ -27,16 +27,16 @@ pub enum ContextError {
 }
 
 impl EffectTarget {
-    pub fn expect_entity(self) -> ContextResult<EntityId> {
+    pub fn expect_unit(self) -> ContextResult<UnitId> {
         match self {
-            EffectTarget::Entity(entity) => Ok(entity),
+            EffectTarget::Unit(unit) => Ok(unit),
             EffectTarget::Position(_) => Err(ContextError::NoTarget), // TODO: better error
         }
     }
 
     pub fn find_pos(self, world: &World) -> ComponentResult<vec2<Coord>> {
         match self {
-            EffectTarget::Entity(entity) => world.entities.grid_position.get(entity).copied(),
+            EffectTarget::Unit(unit) => world.units.grid_position.get(unit).copied(),
             EffectTarget::Position(pos) => Ok(pos),
         }
     }

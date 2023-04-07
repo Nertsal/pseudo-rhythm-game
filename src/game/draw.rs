@@ -29,9 +29,9 @@ impl Game {
         );
 
         let radius = self.world.grid.cell_size.x.min(self.world.grid.cell_size.y) / 2.0;
-        for (id, &pos) in self.world.entities.grid_position.iter() {
+        for (id, &pos) in self.world.units.grid_position.iter() {
             let pos = self.world.grid.grid_to_world(pos) + self.world.grid.cell_size / 2.0;
-            let color = if id == self.world.player.entity {
+            let color = if id == self.world.player.unit {
                 Rgba::GREEN
             } else {
                 Rgba::RED
@@ -49,14 +49,9 @@ impl Game {
     }
 
     fn draw_particles(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
-        for (id, particle) in self.world.entities.particle.iter() {
-            let pos = self
-                .world
-                .entities
-                .world_position
-                .get(id)?
-                .map(FCoord::as_f32);
-            let &color = self.world.entities.color.get(id)?;
+        for particle in self.world.particles.iter() {
+            let pos = particle.position.map(FCoord::as_f32);
+            let color = particle.color;
             let t = particle.lifetime.get_ratio().as_f32();
             let t = crate::util::smooth_step(t);
             let radius = particle.size.as_f32() / 2.0 * t;

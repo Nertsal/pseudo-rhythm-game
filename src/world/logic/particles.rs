@@ -6,7 +6,11 @@ impl World {
         self.spawn_particles_world(world_pos, color)
     }
 
-    pub fn spawn_particles_world(&mut self, pos: vec2<FCoord>, color: Color) -> SystemResult<()> {
+    pub fn spawn_particles_world(
+        &mut self,
+        position: vec2<FCoord>,
+        color: Color,
+    ) -> SystemResult<()> {
         let amount = 5;
         for i in 0..amount {
             let speed = FCoord::new(1.5);
@@ -15,20 +19,14 @@ impl World {
             let (sin, cos) = angle.sin_cos();
             let velocity = vec2(cos, sin).map(FCoord::new) * speed;
 
-            let id = self.entities.spawn();
-            self.entities.world_position.insert(id, pos).unwrap();
-            self.entities.velocity.insert(id, velocity).unwrap();
-            self.entities.color.insert(id, color).unwrap();
-            self.entities
-                .particle
-                .insert(
-                    id,
-                    Particle {
-                        lifetime: Health::new(Time::new(0.3)),
-                        size: FCoord::new(0.3),
-                    },
-                )
-                .unwrap();
+            let particle = Particle {
+                position,
+                velocity,
+                lifetime: Health::new(Time::new(0.3)),
+                size: FCoord::new(0.3),
+                color,
+            };
+            self.particles.push(particle);
         }
 
         Ok(())
@@ -38,7 +36,7 @@ impl World {
 impl Logic<'_> {
     pub fn process_particles(&mut self) {
         let mut dead = Vec::new();
-        for (id, particle) in self.world.entities.particle.iter_mut() {
+        for (id, particle) in self.world.particles.iter_mut().enumerate() {
             particle.lifetime.damage(self.delta_time);
             if particle.lifetime.is_dead() {
                 dead.push(id);
@@ -46,10 +44,11 @@ impl Logic<'_> {
             }
 
             // particle.size = particle.lifetime.get_ratio();
+            particle.position += particle.velocity * self.delta_time;
         }
 
-        for id in dead {
-            self.world.entities.remove(id);
+        for id in dead.into_iter().rev() {
+            self.world.particles.swap_remove(id);
         }
     }
 }

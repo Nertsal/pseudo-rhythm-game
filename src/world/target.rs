@@ -28,15 +28,11 @@ pub enum TargetFitness {
 pub type Fitness = R32;
 
 impl TargetSelector {
-    pub fn evaluate(
-        &self,
-        world: &World,
-        entity: EntityId,
-    ) -> ComponentResult<Option<EffectTarget>> {
+    pub fn evaluate(&self, world: &World, unit: UnitId) -> ComponentResult<Option<EffectTarget>> {
         let mut best_target = None;
 
-        let mut eval_entity = |id: EntityId| -> ComponentResult<()> {
-            let fitness = self.fitness.evaluate(id, world, entity)?;
+        let mut eval_unit = |id: UnitId| -> ComponentResult<()> {
+            let fitness = self.fitness.evaluate(id, world, unit)?;
             let target = (id, fitness);
             best_target = Some(
                 best_target
@@ -47,48 +43,43 @@ impl TargetSelector {
         };
 
         if let TargetFilter::Own = self.filter {
-            eval_entity(entity)?;
+            eval_unit(unit)?;
         } else {
-            for (id, ()) in world.entities.ids().iter() {
-                if id != entity
-                    && (id == world.player.entity || world.entities.unit.contains(id))
-                    && self.filter.check(id, world, entity)?
+            for (id, ()) in world.units.ids().iter() {
+                if id != unit
+                    && (id == world.player.unit || world.units.unit.contains(id))
+                    && self.filter.check(id, world, unit)?
                 {
-                    eval_entity(id)?;
+                    eval_unit(id)?;
                 }
             }
         }
 
-        Ok(best_target.map(|(target, _)| EffectTarget::Entity(target)))
+        Ok(best_target.map(|(target, _)| EffectTarget::Unit(target)))
     }
 }
 
 impl TargetFilter {
-    pub fn check(self, target: EntityId, world: &World, entity: EntityId) -> ComponentResult<bool> {
+    pub fn check(self, target: UnitId, world: &World, unit: UnitId) -> ComponentResult<bool> {
         match self {
-            TargetFilter::Own => Ok(target == entity),
-            TargetFilter::Fraction(filter) => filter.check_query(target, world, entity),
+            TargetFilter::Own => Ok(target == unit),
+            TargetFilter::Fraction(filter) => filter.check_query(target, world, unit),
         }
     }
 }
 
 impl FractionFilter {
-    pub fn check_query(
-        self,
-        target: EntityId,
-        world: &World,
-        entity: EntityId,
-    ) -> ComponentResult<bool> {
-        let &entity = world.entities.fraction.get(entity)?;
-        let &target = world.entities.fraction.get(target)?;
-        Ok(self.check(entity, target))
+    pub fn check_query(self, target: UnitId, world: &World, unit: UnitId) -> ComponentResult<bool> {
+        let &unit = world.units.fraction.get(unit)?;
+        let &target = world.units.fraction.get(target)?;
+        Ok(self.check(unit, target))
     }
 
-    pub fn check(self, entity: Fraction, other: Fraction) -> bool {
+    pub fn check(self, unit: Fraction, other: Fraction) -> bool {
         match self {
             FractionFilter::Any => true,
-            FractionFilter::Ally => entity == other,
-            FractionFilter::Enemy => entity != other,
+            FractionFilter::Ally => unit == other,
+            FractionFilter::Enemy => unit != other,
         }
     }
 }
@@ -96,15 +87,15 @@ impl FractionFilter {
 impl TargetFitness {
     pub fn evaluate(
         &self,
-        target: EntityId,
+        target: UnitId,
         world: &World,
-        entity: EntityId,
+        unit: UnitId,
     ) -> ComponentResult<Fitness> {
         match self {
-            TargetFitness::Negative(fitness) => Ok(-fitness.evaluate(target, world, entity)?),
+            TargetFitness::Negative(fitness) => Ok(-fitness.evaluate(target, world, unit)?),
             TargetFitness::Distance => {
-                let &pos = world.entities.grid_position.get(entity)?;
-                let &target_pos = world.entities.grid_position.get(target)?;
+                let &pos = world.units.grid_position.get(unit)?;
+                let &target_pos = world.units.grid_position.get(target)?;
                 let delta = target_pos - pos;
                 let distance = crate::util::king_distance(delta);
                 Ok(Fitness::new(distance as f32))

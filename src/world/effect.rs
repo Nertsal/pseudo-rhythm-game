@@ -34,10 +34,10 @@ impl Effect {
 impl EffectDamage {
     pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
         let target = context.expect_target()?;
-        let entity = target.expect_entity()?;
+        let unit = target.expect_unit()?;
 
-        // let &pos = world.entities.grid_position.get(target)?;
-        world.entity_damage(entity, self.value)?;
+        // let &pos = world.units.grid_position.get(target)?;
+        world.unit_damage(unit, self.value)?;
         // world.spawn_particles(pos, Color::WHITE)?;
         Ok(())
     }

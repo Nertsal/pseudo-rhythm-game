@@ -9,31 +9,31 @@ impl ActionEffect {
     pub fn into_effect(
         self,
         world: &World,
-        entity: EntityId,
+        unit: UnitId,
         input: ActionInput,
     ) -> SystemResult<(Effect, EffectContext)> {
         let mut context = EffectContext {
-            caster: Some(EffectCaster { entity }),
+            caster: Some(EffectCaster { unit }),
             target: None,
         };
 
         match self {
             ActionEffect::MeleeAttack { damage } => {
-                let player = world.player.entity;
+                let player = world.player.unit;
 
                 let (target, target_pos) = match input.target {
-                    EffectTarget::Entity(entity) => {
+                    EffectTarget::Unit(unit) => {
                         // Check validity
-                        (Some(entity), *world.entities.grid_position.get(entity)?)
+                        (Some(unit), *world.units.grid_position.get(unit)?)
                     }
                     EffectTarget::Position(target_pos) => {
-                        let &player_pos = world.entities.grid_position.get(player)?;
+                        let &player_pos = world.units.grid_position.get(player)?;
                         let delta = target_pos - player_pos;
                         let target_pos =
                             player_pos + crate::util::vec_to_dir(delta.map(|x| x as f32));
 
                         let target = world
-                            .entities
+                            .units
                             .grid_position
                             .iter()
                             .find(|(_, &pos)| pos == target_pos);
@@ -44,7 +44,7 @@ impl ActionEffect {
 
                 if let Some(target) = target {
                     let effect = EffectDamage { value: damage };
-                    context.target = Some(EffectTarget::Entity(target));
+                    context.target = Some(EffectTarget::Unit(target));
                     return Ok((Effect::Damage(Box::new(effect)), context));
                 }
 

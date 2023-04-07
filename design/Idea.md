@@ -25,15 +25,15 @@
 1. Based on the bpm, i.e. relative to the player's speed.
 2. Based on real time, i.e. with their own bpm independent of the player's speed.
 
-**Entity** (player and enemies):
+**Unit** (player and enemies):
 - Can stay in place or move to a cell in [[Von Neumann neighborhood]].
 - Can hold up to 2 items (1 for each hand), and use either of them.
-- So, entity has 4 actions to choose from on every [[Beat]]: stay, move, use left hand item, use right hand item.
+- So, unit has 4 actions to choose from on every [[Beat]]: stay, move, use left hand item, use right hand item.
 
 **Movement:**
-- Typically entities can move to any [[Cell]] in [[Von Neumann neighborhood]]
+- Typically units can move to any [[Cell]] in [[Von Neumann neighborhood]]
 - Unless it is occupied by a [[Block]] (but some can be broken).
-- If the cell is occupied by another [[Entity]], then [[Contact damage]] is dealt to both entities (which might be imbalanced). If that entity dies, the moving entity takes its place. Otherwise, both entities stay in place.
+- If the cell is occupied by another [[Unit]], then [[Contact damage]] is dealt to both units (which might be imbalanced). If that unit dies, the moving unit takes its place. Otherwise, both units stay in place.
 
 **Items:**
 - Sword - attacks a single cell in [[Moore neighborhood]].
@@ -44,9 +44,9 @@
 - Can be of 2 types:
 	1. Direct
 		- Travels in a straight line towards the target.
-		- Hits any entity that happens to be on the line.
+		- Hits any unit that happens to be on the line.
 	2. Ballistic
-		- Travels over other entities directly to the target.
+		- Travels over other units directly to the target.
 
 
 

@@ -16,8 +16,8 @@ impl Logic<'_> {
     }
 
     fn movement(&mut self) -> SystemResult<()> {
-        for (entity, &velocity) in self.world.entities.velocity.iter() {
-            let position = self.world.entities.world_position.get_mut(entity)?;
+        for (id, &velocity) in self.world.units.velocity.iter() {
+            let position = self.world.units.world_position.get_mut(id)?;
             *position += velocity * self.delta_time;
         }
         Ok(())
@@ -25,7 +25,7 @@ impl Logic<'_> {
 
     fn process_units(&mut self) -> SystemResult<()> {
         let mut actions = Vec::new();
-        for (id, unit) in self.world.entities.unit.iter_mut() {
+        for (id, unit) in self.world.units.unit.iter_mut() {
             let bpm = unit.beat.calc_bpm(self.world.beat_controller.get_bpm());
             let beat_time = Time::new(60.0 / bpm);
             unit.next_beat -= self.delta_time / beat_time;
@@ -36,9 +36,9 @@ impl Logic<'_> {
         }
 
         for id in actions {
-            let unit = self.world.entities.unit.get(id)?;
+            let unit = self.world.units.unit.get(id)?;
             if let Some((action, input)) = unit.behaviour.evaluate(self.world, id)? {
-                self.world.entity_action(id, action, input)?;
+                self.world.unit_action(id, action, input)?;
             }
         }
 
@@ -54,7 +54,7 @@ impl World {
         }
 
         // TODO: validate action
-        self.entity_action(self.player.entity, action, input)
+        self.unit_action(self.player.unit, action, input)
     }
 
     pub fn update(&mut self, delta_time: Time) -> SystemResult<()> {
@@ -80,98 +80,96 @@ impl World {
         Ok(())
     }
 
-    fn entity_action(
+    fn unit_action(
         &mut self,
-        entity: EntityId,
+        unit: UnitId,
         action: Action,
         input: ActionInput,
     ) -> SystemResult<()> {
-        debug!("Entity {entity:?} executing action {action:?} with input {input:?}");
-        // self.entities.ids.get(entity)?;
-
+        debug!("Unit {unit:?} executing action {action:?} with input {input:?}");
         match action {
-            Action::Move(action) => self.entity_move(entity, action),
-            Action::UseItem(action) => self.entity_use_item(entity, action, input),
+            Action::Move(action) => self.unit_move(unit, action),
+            Action::UseItem(action) => self.unit_use_item(unit, action, input),
         }
     }
 
-    fn entity_move(&mut self, entity: EntityId, action: ActionMove) -> SystemResult<()> {
-        let &pos = self.entities.grid_position.get(entity)?;
+    fn unit_move(&mut self, unit: UnitId, action: ActionMove) -> SystemResult<()> {
+        let &pos = self.units.grid_position.get(unit)?;
         match action {
-            ActionMove::Slide(slide) => self.entity_slide(entity, slide)?,
+            ActionMove::Slide(slide) => self.unit_slide(unit, slide)?,
             ActionMove::Teleport(_tp) => {
                 todo!()
             }
         }
 
-        if Ok(&pos) != self.entities.grid_position.get(entity) {
-            // Entity actually moved
+        if Ok(&pos) != self.units.grid_position.get(unit) {
+            // Unit actually moved
             self.spawn_particles(pos, Color::BLUE)?;
         }
 
         Ok(())
     }
 
-    fn entity_slide(&mut self, entity: EntityId, slide: MoveSlide) -> SystemResult<()> {
+    fn unit_slide(&mut self, unit: UnitId, slide: MoveSlide) -> SystemResult<()> {
         if slide.delta.x.abs() > 1 || slide.delta.y.abs() > 1 {
             // TODO
             todo!("Only single-tile slide move implemented");
         }
 
-        let &pos = self.entities.grid_position.get(entity)?;
+        let &pos = self.units.grid_position.get(unit)?;
 
         let target = pos + slide.delta;
 
         let other = self
-            .entities
+            .units
             .grid_position
             .iter()
             .find(|(_, &pos)| pos == target);
         if let Some((other, _)) = other {
-            self.contact_damage(entity, other)?;
+            self.contact_damage(unit, other)?;
             return Ok(());
         }
 
-        self.entities.grid_position.update(entity, target)?;
+        self.units.grid_position.update(unit, target)?;
         Ok(())
     }
 
-    pub fn contact_damage(&mut self, entity_a: EntityId, entity_b: EntityId) -> SystemResult<()> {
+    pub fn contact_damage(&mut self, unit_a: UnitId, unit_b: UnitId) -> SystemResult<()> {
         // TODO: customize damage
-        self.entity_damage(entity_a, Hp::new(1.0))?;
-        self.entity_damage(entity_b, Hp::new(1.0))?;
+        self.unit_damage(unit_a, Hp::new(1.0))?;
+        self.unit_damage(unit_b, Hp::new(1.0))?;
         Ok(())
     }
 
-    pub fn entity_damage(&mut self, entity: EntityId, damage: Hp) -> SystemResult<()> {
-        let &pos = self.entities.grid_position.get(entity)?;
+    pub fn unit_damage(&mut self, unit: UnitId, damage: Hp) -> SystemResult<()> {
+        let &pos = self.units.grid_position.get(unit)?;
 
-        let health = self.entities.health.get_mut(entity)?;
+        let health = self.units.health.get_mut(unit)?;
         health.damage(damage);
         if health.is_dead() {
-            // Entity died
+            // Unit died
             // TODO: death effect
-            self.entities.remove(entity);
+            self.units.remove(unit);
         }
 
         self.spawn_particles(pos, Color::WHITE)?;
         Ok(())
     }
 
-    fn entity_use_item(
+    fn unit_use_item(
         &mut self,
-        entity: EntityId,
+        unit: UnitId,
         action: ActionUseItem,
         input: ActionInput,
     ) -> SystemResult<()> {
-        let items = self.entities.held_items.get(entity)?;
+        let items = self.units.held_items.get(unit)?;
         let Some(item) = items.get_item(action.item) else {
             debug!("Tried using item from an empty hand");
             return Ok(());
         };
 
         let action = item.on_use.clone();
-        let (effect, context) = action.into_effect(self, entity, input)?;
+        let (effect, context) = action.into_effect(self, unit, input)?;
         effect.apply(self, context)?;
 
         Ok(())

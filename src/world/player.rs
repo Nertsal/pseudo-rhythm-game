@@ -4,11 +4,11 @@ pub type PlayerAction = Action;
 
 #[derive(Debug)]
 pub struct Player {
-    pub entity: EntityId,
+    pub unit: UnitId,
 }
 
 impl Player {
-    pub fn new(entity_id: EntityId) -> Self {
-        Self { entity: entity_id }
+    pub fn new(unit: UnitId) -> Self {
+        Self { unit }
     }
 }

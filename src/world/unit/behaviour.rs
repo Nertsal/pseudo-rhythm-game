@@ -1,28 +1,5 @@
 use super::*;
 
-#[derive(Debug, Clone)]
-pub struct Unit {
-    pub beat: UnitBeat,
-    /// Normalized (in range 0..1) time until the next beat.
-    pub next_beat: Time,
-    pub behaviour: UnitBehaviour,
-}
-
-/// Describes how often the unit makes decisions.
-#[derive(Debug, Clone)]
-pub enum UnitBeat {
-    /// Beats once every `player / unit` player's beats.
-    Synchronized {
-        /// How many times should the unit beat.
-        unit: Ticks,
-        /// How many player's beats should pass.
-        player: Ticks,
-    },
-    Independent {
-        bpm: Ticks,
-    },
-}
-
 pub type UnitAction = Action;
 
 pub type BehaviourResult<T> = Result<T, BehaviourError>;
@@ -83,16 +60,16 @@ impl UnitBehaviour {
     pub fn evaluate(
         &self,
         world: &World,
-        entity: EntityId,
+        unit: UnitId,
     ) -> BehaviourResult<Option<(UnitAction, ActionInput)>> {
         let context = BehaviourContext::None;
-        self.evaluate_with_context(world, entity, context)
+        self.evaluate_with_context(world, unit, context)
     }
 
     fn evaluate_with_context(
         &self,
         world: &World,
-        entity: EntityId,
+        unit: UnitId,
         context: BehaviourContext,
     ) -> BehaviourResult<Option<(UnitAction, ActionInput)>> {
         match self {
@@ -101,21 +78,21 @@ impl UnitBehaviour {
                 selector,
                 then_behave,
             } => {
-                match selector.evaluate(world, entity)? {
+                match selector.evaluate(world, unit)? {
                     None => {
                         // No target found
                         Ok(None)
                     }
                     Some(target) => {
                         let context = BehaviourContext::Target(target);
-                        then_behave.evaluate_with_context(world, entity, context)
+                        then_behave.evaluate_with_context(world, unit, context)
                     }
                 }
             }
             Self::MoveToTarget => {
                 let target = context.expect_target()?;
                 let target_pos = target.find_pos(world)?;
-                let &pos = world.entities.grid_position.get(entity)?;
+                let &pos = world.units.grid_position.get(unit)?;
                 let delta = target_pos - pos;
                 let move_delta = crate::util::vec_to_dir(delta.map(|x| x as f32));
                 Ok(Some((
@@ -135,12 +112,12 @@ impl UnitBehaviour {
                 then_behave,
                 else_behave,
             } => {
-                let behave = if condition.evaluate(world, entity, &context)? {
+                let behave = if condition.evaluate(world, unit, &context)? {
                     then_behave
                 } else {
                     else_behave
                 };
-                behave.evaluate_with_context(world, entity, context)
+                behave.evaluate_with_context(world, unit, context)
             }
         }
     }
@@ -150,13 +127,13 @@ impl BehaviourCondition {
     fn evaluate(
         &self,
         world: &World,
-        entity: EntityId,
+        unit: UnitId,
         context: &BehaviourContext,
     ) -> BehaviourResult<bool> {
         match self {
             &BehaviourCondition::TargetInRange { distance } => match context {
                 BehaviourContext::Target(target) => {
-                    let &pos = world.entities.grid_position.get(entity)?;
+                    let &pos = world.units.grid_position.get(unit)?;
                     let target_pos = target.find_pos(world)?;
                     Ok(crate::util::king_distance(target_pos - pos) <= distance)
                 }
