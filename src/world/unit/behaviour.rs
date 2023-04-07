@@ -50,7 +50,7 @@ enum BehaviourContext {
 impl UnitBeat {
     pub fn calc_bpm(&self, player_bpm: f32) -> f32 {
         match *self {
-            UnitBeat::Synchronized { unit, player } => player_bpm * unit as f32 / player as f32,
+            UnitBeat::Synchronized { unit, player, .. } => player_bpm * unit as f32 / player as f32,
             UnitBeat::Independent { bpm } => bpm as f32,
         }
     }

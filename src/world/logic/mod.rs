@@ -28,8 +28,16 @@ impl Logic<'_> {
         for (id, unit) in self.world.units.unit.iter_mut() {
             let bpm = unit.beat.calc_bpm(self.world.beat_controller.get_bpm());
             let beat_time = Time::new(60.0 / bpm);
+
+            if let UnitBeat::Synchronized { .. } = unit.beat {
+                if self.world.player_beat_time >= Time::ONE {
+                    // Wait for player beat
+                    continue;
+                }
+            }
+
             unit.next_beat -= self.delta_time / beat_time;
-            while unit.next_beat < Time::ZERO {
+            if unit.next_beat < Time::ZERO {
                 actions.push(id);
                 unit.next_beat += Time::ONE;
             }
@@ -48,16 +56,37 @@ impl Logic<'_> {
 
 impl World {
     pub fn player_action(&mut self, action: PlayerAction, input: ActionInput) -> SystemResult<()> {
+        self.player_beat_time = Time::ZERO;
         let ticks = self.beat_controller.player_beat();
         for _ in 0..ticks {
             self.music_controller.tick();
         }
 
         // TODO: validate action
-        self.unit_action(self.player.unit, action, input)
+        self.unit_action(self.player.unit, action, input)?;
+
+        // Synchronize units
+        for (_, unit) in self.units.unit.iter_mut() {
+            if let UnitBeat::Synchronized {
+                player: player_beats,
+                current_beat,
+                ..
+            } = &mut unit.beat
+            {
+                *current_beat = (*current_beat + 1) % *player_beats;
+                if *current_beat % *player_beats == 0 {
+                    unit.next_beat = Time::ZERO;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn update(&mut self, delta_time: Time) -> SystemResult<()> {
+        let beat_time = Time::new(60.0 / self.beat_controller.get_bpm());
+        self.player_beat_time += delta_time / beat_time;
+
         let mut logic = Logic {
             world: self,
             delta_time,

@@ -23,6 +23,8 @@ pub enum UnitBeat {
         unit: Ticks,
         /// How many player's beats should pass.
         player: Ticks,
+        /// Current beat index modulo `player`.
+        current_beat: Ticks,
     },
     Independent {
         bpm: Ticks,

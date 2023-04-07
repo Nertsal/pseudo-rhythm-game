@@ -44,6 +44,8 @@ pub struct World {
     pub player: Player,
     pub beat_controller: BeatController,
     pub music_controller: MusicController,
+    /// Normalized (in range 0..1) time since the last player's beat.
+    pub player_beat_time: Time,
     pub units: Units,
     pub particles: Vec<Particle>,
 }
@@ -97,6 +99,7 @@ impl World {
                 synthesizers,
             ),
             beat_controller: BeatController::new(beat_config),
+            player_beat_time: Time::ZERO,
             units,
             particles: Vec::new(),
         };
@@ -156,7 +159,11 @@ impl World {
             .insert(
                 enemy,
                 UnitAI {
-                    beat: UnitBeat::Independent { bpm: 100 },
+                    beat: UnitBeat::Synchronized {
+                        unit: 1,
+                        player: 2,
+                        current_beat: 0,
+                    },
                     next_beat: Time::ONE,
                     behaviour: UnitBehaviour::SelectTarget {
                         selector: TargetSelector {

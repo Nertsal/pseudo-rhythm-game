@@ -47,7 +47,7 @@ impl TargetSelector {
         } else {
             for (id, ()) in world.units.ids().iter() {
                 if id != unit
-                    && (id == world.player.unit || world.units.unit.contains(id))
+                    // && (id == world.player.unit || world.units.unit.contains(id))
                     && self.filter.check(id, world, unit)?
                 {
                     eval_unit(id)?;
