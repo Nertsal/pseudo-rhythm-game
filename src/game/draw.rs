@@ -15,6 +15,15 @@ const CLAMPED_COLOR: Rgba<f32> = Rgba {
 
 impl Game {
     pub fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
+        self.draw_grid(framebuffer)?;
+        self.draw_hovered(framebuffer)?;
+        self.draw_units(framebuffer)?;
+        self.draw_particles(framebuffer)?;
+        self.draw_sound(framebuffer)?;
+        Ok(())
+    }
+
+    fn draw_grid(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
 
         let screen_vs = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
@@ -23,7 +32,6 @@ impl Game {
             .collect();
         let screen_vs = ugli::VertexBuffer::new_dynamic(self.geng.ugli(), screen_vs);
 
-        // Grid
         ugli::draw(
             framebuffer,
             &self.assets.shaders.grid,
@@ -41,7 +49,12 @@ impl Game {
             },
         );
 
-        // Hovered cells
+        Ok(())
+    }
+
+    fn draw_hovered(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
+        let framebuffer_size = framebuffer.size().map(|x| x as f32);
+
         let &player_pos = self.world.units.grid_position.get(self.world.player.unit)?;
         let hovered = self.world.grid.world_to_grid(self.cursor_world_pos).0;
         let delta = hovered - player_pos;
@@ -74,7 +87,10 @@ impl Game {
             )
         }
 
-        // Units
+        Ok(())
+    }
+
+    fn draw_units(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
         let radius = 0.9 * self.world.grid.cell_size.x.min(self.world.grid.cell_size.y) / 2.0;
         for (id, &pos) in self.world.units.grid_position.iter() {
             let pos = self.world.grid.grid_to_world(pos) + self.world.grid.cell_size / 2.0;
@@ -93,8 +109,6 @@ impl Game {
                 &draw_2d::Ellipse::circle(pos, radius, color),
             );
         }
-
-        self.draw_particles(framebuffer)?;
 
         Ok(())
     }
@@ -116,6 +130,46 @@ impl Game {
 
         Ok(())
     }
+
+    fn draw_sound(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
+        let framebuffer_size = framebuffer.size().map(|x| x as f32);
+        let buffer = self.world.music_controller.get_buffer();
+
+        // Visualize beat timer
+        let width = (1.0 - self.world.player_beat_time.as_f32()).clamp_range(0.0..=1.0);
+        self.geng.draw_2d(
+            framebuffer,
+            &geng::PixelPerfectCamera,
+            &draw_2d::Quad::new(
+                Aabb2::point(framebuffer_size * vec2(0.5, 0.95))
+                    .extend_symmetric(framebuffer_size * vec2(0.1 * width, 0.01)),
+                Rgba::GRAY,
+            ),
+        );
+
+        // Visualize the wave with time
+        let mesh = audio_mesh(buffer.clone(), Rgba::GRAY, Rgba::opaque(0.5, 0.0, 0.5));
+        let matrix =
+            mat3::scale(vec2(1.0 / rodio::Source::sample_rate(buffer) as f32, 1.0) * 3000.0)
+                * mat3::translate(vec2(-0.5, 0.0));
+        let mesh = ugli::VertexBuffer::new_dynamic(self.geng.ugli(), mesh);
+        ugli::draw(
+            framebuffer,
+            &self.assets.shaders.color,
+            ugli::DrawMode::Triangles,
+            &mesh,
+            (
+                ugli::uniforms! {
+                    u_model_matrix: matrix,
+                    u_color: Rgba::GRAY,
+                },
+                geng::camera2d_uniforms(&geng::PixelPerfectCamera, framebuffer_size),
+            ),
+            ugli::DrawParameters::default(),
+        );
+
+        Ok(())
+    }
 }
 
 fn cell_mesh(pos: vec2<Coord>, grid: &Grid) -> Vec<vec2<f32>> {
@@ -129,4 +183,78 @@ fn cell_mesh(pos: vec2<Coord>, grid: &Grid) -> Vec<vec2<f32>> {
         pos + size,
         pos + vec2(0.0, size.y),
     ]
+}
+
+pub fn audio_mesh(
+    source: impl rodio::Source<Item = f32>,
+    top_color: Rgba<f32>,
+    bottom_color: Rgba<f32>,
+) -> Vec<draw_2d::ColoredVertex> {
+    if source.channels() != 1 {
+        unimplemented!("Only mono audio is supported");
+    }
+
+    construct_points_mesh(
+        source.enumerate().map(|(x, y)| vec2(x as f32, y)),
+        0.0,
+        top_color,
+        bottom_color,
+    )
+}
+
+// pub fn freq_mesh(
+//     source: &[Frequency],
+//     top_color: Rgba<f32>,
+//     bottom_color: Rgba<f32>,
+// ) -> Vec<draw_2d::ColoredVertex> {
+//     construct_points_mesh(
+//         source
+//             .iter()
+//             .map(|freq| vec2(freq.freq, freq.volume / 100.0)),
+//         0.01,
+//         top_color,
+//         bottom_color,
+//     )
+// }
+
+fn construct_points_mesh(
+    points: impl IntoIterator<Item = vec2<f32>>,
+    min_y: f32,
+    top_color: Rgba<f32>,
+    bottom_color: Rgba<f32>,
+) -> Vec<draw_2d::ColoredVertex> {
+    let mut mesh = Vec::new();
+
+    for vec2(x, mut y) in points {
+        let top_color = Rgba::lerp(bottom_color, top_color, y.abs());
+        if y.abs() < min_y {
+            y = min_y;
+        }
+        mesh.push(draw_2d::ColoredVertex {
+            a_pos: vec2(x, 0.0),
+            a_color: bottom_color,
+        });
+        mesh.push(draw_2d::ColoredVertex {
+            a_pos: vec2(x + 1.0, 0.0),
+            a_color: bottom_color,
+        });
+        mesh.push(draw_2d::ColoredVertex {
+            a_pos: vec2(x, y),
+            a_color: top_color,
+        });
+        mesh.push(draw_2d::ColoredVertex {
+            a_pos: vec2(x + 1.0, 0.0),
+            a_color: bottom_color,
+        });
+        mesh.push(draw_2d::ColoredVertex {
+            a_pos: vec2(x, y),
+            a_color: top_color,
+        });
+        mesh.push(draw_2d::ColoredVertex {
+            a_pos: vec2(x + 1.0, y),
+            a_color: top_color,
+        });
+    }
+
+    mesh
 }

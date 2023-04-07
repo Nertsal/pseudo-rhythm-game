@@ -41,6 +41,10 @@ impl MusicController {
         controller
     }
 
+    pub fn get_buffer(&self) -> &RawSource {
+        &self.buffer
+    }
+
     pub fn set_bpm(&mut self, bpm: f32) {
         self.bpm = bpm;
         self.tick_t = 60.0 / (bpm * self.config.ticks_per_beat as f32);
