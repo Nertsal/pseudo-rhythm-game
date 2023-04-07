@@ -7,5 +7,6 @@ pub struct Assets {
 
 #[derive(geng::Assets)]
 pub struct Shaders {
+    pub color: ugli::Program,
     pub grid: ugli::Program,
 }

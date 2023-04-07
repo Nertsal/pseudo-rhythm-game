@@ -22,7 +22,7 @@ void main() {
 #ifdef FRAGMENT_SHADER
 void main() {
     vec4 even_color = vec4(0.1, 0.1, 0.1, 1.0);
-    vec4 odd_color = vec4(0.2, 0.2, 0.2, 1.0);
+    vec4 odd_color = vec4(0.15, 0.15, 0.15, 1.0);
 
     mat3 screen_to_grid = inverse(u_projection_matrix * u_view_matrix * u_grid_matrix);
     vec2 grid_pos = into_2d(vec3(v_pos, 1.0) * screen_to_grid);
