@@ -106,8 +106,33 @@ impl Game {
             self.geng.draw_2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Ellipse::circle(pos, radius, color),
+                &draw_2d::Ellipse::circle(pos, radius * 0.9, color),
             );
+
+            let beat_time = if id == self.world.player.unit {
+                Some(1.0 - self.world.player_beat_time.as_f32())
+            } else if let Ok(unit) = self.world.units.unit.get(id) {
+                Some(unit.next_beat.as_f32())
+            } else {
+                None
+            };
+            if let Some(beat_time) = beat_time {
+                let arc = Arc {
+                    angle_min: 0.0 - f32::PI,
+                    angle_max: f32::PI * (2.0 * beat_time - 1.0),
+                    center: pos,
+                    radius_inner: radius * 0.3,
+                    radius_outer: radius * 0.6,
+                    color: color.map_rgb(|x| x * 0.5),
+                };
+                draw_arc(
+                    &arc,
+                    &self.assets.shaders.arc,
+                    &self.geng,
+                    framebuffer,
+                    &self.camera,
+                );
+            }
         }
 
         Ok(())
@@ -136,13 +161,13 @@ impl Game {
         let buffer = self.world.music_controller.get_buffer();
 
         // Visualize beat timer
-        let width = (1.0 - self.world.player_beat_time.as_f32()).clamp_range(0.0..=1.0);
+        let beat_time = (1.0 - self.world.player_beat_time.as_f32()).clamp_range(0.0..=1.0);
         self.geng.draw_2d(
             framebuffer,
             &geng::PixelPerfectCamera,
             &draw_2d::Quad::new(
                 Aabb2::point(framebuffer_size * vec2(0.5, 0.95))
-                    .extend_symmetric(framebuffer_size * vec2(0.1 * width, 0.01)),
+                    .extend_symmetric(framebuffer_size * vec2(0.1 * beat_time, 0.01)),
                 Rgba::GRAY,
             ),
         );
@@ -257,4 +282,53 @@ fn construct_points_mesh(
     }
 
     mesh
+}
+
+struct Arc {
+    pub angle_min: f32,
+    pub angle_max: f32,
+    pub center: vec2<f32>,
+    pub radius_inner: f32,
+    pub radius_outer: f32,
+    pub color: Rgba<f32>,
+}
+
+fn draw_arc(
+    arc: &Arc,
+    arc_shader: &ugli::Program,
+    geng: &Geng,
+    framebuffer: &mut ugli::Framebuffer,
+    camera: &impl geng::AbstractCamera2d,
+) {
+    let framebuffer_size = framebuffer.size().map(|x| x as f32);
+    let geometry = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
+        .into_iter()
+        .map(|(x, y)| draw_2d::Vertex {
+            a_pos: vec2(x as f32, y as f32),
+        })
+        .collect();
+    let geometry = ugli::VertexBuffer::new_dynamic(geng.ugli(), geometry);
+
+    let matrix = mat3::translate(arc.center) * mat3::scale_uniform(arc.radius_outer);
+
+    ugli::draw(
+        framebuffer,
+        arc_shader,
+        ugli::DrawMode::TriangleFan,
+        &geometry,
+        (
+            ugli::uniforms! {
+                u_model_matrix: matrix,
+                u_angle_min: arc.angle_min,
+                u_angle_max: arc.angle_max,
+                u_radius_inner: arc.radius_inner / arc.radius_outer,
+                u_color: arc.color,
+            },
+            geng::camera2d_uniforms(camera, framebuffer_size),
+        ),
+        ugli::DrawParameters {
+            blend_mode: Some(ugli::BlendMode::straight_alpha()),
+            ..default()
+        },
+    )
 }

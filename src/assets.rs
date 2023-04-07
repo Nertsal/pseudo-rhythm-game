@@ -9,4 +9,5 @@ pub struct Assets {
 pub struct Shaders {
     pub color: ugli::Program,
     pub grid: ugli::Program,
+    pub arc: ugli::Program,
 }
