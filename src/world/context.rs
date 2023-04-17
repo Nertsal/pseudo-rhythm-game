@@ -20,9 +20,11 @@ pub enum EffectTarget {
 
 pub type ContextResult<T> = Result<T, ContextError>;
 
-#[derive(Debug, Clone)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum ContextError {
+    #[error("Caster expected but not found in effect context")]
     NoCaster,
+    #[error("Target expected but not found in effect context")]
     NoTarget,
 }
 
@@ -49,14 +51,5 @@ impl EffectContext {
 
     pub fn expect_target(&self) -> ContextResult<EffectTarget> {
         self.target.ok_or(ContextError::NoTarget)
-    }
-}
-
-impl Display for ContextError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ContextError::NoCaster => write!(f, "Caster expected but not found in effect context"),
-            ContextError::NoTarget => write!(f, "Target expected but not found in effect context"),
-        }
     }
 }

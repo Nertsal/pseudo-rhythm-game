@@ -52,11 +52,14 @@ pub struct World {
 
 pub type SystemResult<T> = Result<T, SystemError>;
 
-#[derive(Debug, Clone)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum SystemError {
-    Component(ComponentError),
-    Context(ContextError),
-    Behaviour(BehaviourError),
+    #[error("Component error: {0}")]
+    Component(#[from] ComponentError),
+    #[error("Context error: {0}")]
+    Context(#[from] ContextError),
+    #[error("Behaviour error: {0}")]
+    Behaviour(#[from] BehaviourError),
 }
 
 #[derive(Debug, Clone)]
@@ -181,33 +184,5 @@ impl World {
                 },
             )
             .unwrap()
-    }
-}
-
-impl From<ComponentError> for SystemError {
-    fn from(value: ComponentError) -> Self {
-        Self::Component(value)
-    }
-}
-
-impl From<ContextError> for SystemError {
-    fn from(value: ContextError) -> Self {
-        Self::Context(value)
-    }
-}
-
-impl From<BehaviourError> for SystemError {
-    fn from(value: BehaviourError) -> Self {
-        Self::Behaviour(value)
-    }
-}
-
-impl Display for SystemError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SystemError::Component(error) => write!(f, "Component error: {error}"),
-            SystemError::Context(error) => write!(f, "Context error: {error}"),
-            SystemError::Behaviour(error) => write!(f, "Behaviour error: {error}"),
-        }
     }
 }

@@ -4,15 +4,19 @@ pub type UnitAction = Action;
 
 pub type BehaviourResult<T> = Result<T, BehaviourError>;
 
-#[derive(Debug, Clone)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum BehaviourError {
-    Component(ComponentError),
-    Context(BehaviourContextError),
+    #[error("Component error: {0}")]
+    Component(#[from] ComponentError),
+    #[error("Context error: {0}")]
+    Context(#[from] BehaviourContextError),
 }
 
-#[derive(Debug, Clone)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum BehaviourContextError {
+    #[error("behaviour context missing target")]
     NoTarget,
+    #[error("behaviour context missing action input")]
     NoInput,
 }
 
@@ -155,36 +159,6 @@ impl BehaviourContext {
         match self {
             Self::Input(input) => Ok(input),
             _ => Err(BehaviourContextError::NoInput),
-        }
-    }
-}
-
-impl From<ComponentError> for BehaviourError {
-    fn from(value: ComponentError) -> Self {
-        Self::Component(value)
-    }
-}
-
-impl From<BehaviourContextError> for BehaviourError {
-    fn from(value: BehaviourContextError) -> Self {
-        Self::Context(value)
-    }
-}
-
-impl Display for BehaviourError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BehaviourError::Component(error) => write!(f, "Component error: {error}"),
-            BehaviourError::Context(error) => write!(f, "Context error: {error}"),
-        }
-    }
-}
-
-impl Display for BehaviourContextError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            BehaviourContextError::NoTarget => write!(f, "behaviour context missing target"),
-            BehaviourContextError::NoInput => write!(f, "behaviour context missing action input"),
         }
     }
 }

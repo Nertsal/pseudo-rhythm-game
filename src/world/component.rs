@@ -10,9 +10,11 @@ pub type ComponentResult<T> = Result<T, ComponentError>;
 
 pub type ComponentName = &'static str;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(thiserror::Error, Debug, Clone, PartialEq)]
 pub enum ComponentError {
+    #[error("component {component} not found for {id:?}")]
     NotFound { id: Id, component: ComponentName },
+    #[error("component {component} already exists for {id:?}")]
     AlreadyExists { id: Id, component: ComponentName },
 }
 
@@ -92,18 +94,5 @@ fn option_comp_result<T>(
             id,
             component: component.to_owned(),
         }),
-    }
-}
-
-impl Display for ComponentError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ComponentError::NotFound { id, component } => {
-                write!(f, "component {component} not found for {id:?}")
-            }
-            ComponentError::AlreadyExists { id, component } => {
-                write!(f, "component {component} already exists for {id:?}")
-            }
-        }
     }
 }
