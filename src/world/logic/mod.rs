@@ -103,7 +103,7 @@ impl World {
 
         // Play music
         for sound in self.music_controller.update(delta_time.as_f32()) {
-            geng::SoundEffect::from_source(&self.geng, sound).play();
+            geng::SoundEffect::from_source(&self.geng, &sound).play();
         }
 
         Ok(())
