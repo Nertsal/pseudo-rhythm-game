@@ -38,7 +38,6 @@ pub struct Units {
     pub fraction: ComponentStorage<Fraction>,
     pub grid_position: ComponentStorage<vec2<Coord>>,
     pub world_position: ComponentStorage<vec2<FCoord>>,
-    pub velocity: ComponentStorage<vec2<FCoord>>,
     pub health: ComponentStorage<Health>,
     pub held_items: ComponentStorage<HeldItems>,
 }
@@ -65,7 +64,6 @@ impl Units {
         let _ = self.fraction.remove(id);
         let _ = self.grid_position.remove(id);
         let _ = self.world_position.remove(id);
-        let _ = self.velocity.remove(id);
         let _ = self.health.remove(id);
         let _ = self.held_items.remove(id);
         self.ids.remove(id).is_ok()
@@ -81,7 +79,6 @@ impl Default for Units {
             fraction: ComponentStorage::new("Fraction"),
             grid_position: ComponentStorage::new("GridPosition"),
             world_position: ComponentStorage::new("WorldPosition"),
-            velocity: ComponentStorage::new("Velocity"),
             health: ComponentStorage::new("Health"),
             held_items: ComponentStorage::new("HeldItems"),
         }

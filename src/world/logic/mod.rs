@@ -9,17 +9,8 @@ struct Logic<'a> {
 
 impl Logic<'_> {
     pub fn process(&mut self) -> SystemResult<()> {
-        self.movement()?;
         self.process_units()?;
         self.process_particles();
-        Ok(())
-    }
-
-    fn movement(&mut self) -> SystemResult<()> {
-        for (id, &velocity) in self.world.units.velocity.iter() {
-            let position = self.world.units.world_position.get_mut(id)?;
-            *position += velocity * self.delta_time;
-        }
         Ok(())
     }
 
