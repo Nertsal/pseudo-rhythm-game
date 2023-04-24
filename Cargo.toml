@@ -5,12 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[workspace]
-members = ["crates/*"]
-
 [dependencies]
 geng = { git = "https://github.com/Nertsal/geng", branch = "source" }
 rodio = { git = "https://github.com/kuviman/rodio", branch = "mp3-duration" }
+ecs = { git = "https://github.com/geng-engine/ecs" }
 serde = { version = "1.0.156", features = ["derive"] }
 rustysynth = "0.9.0"
 thiserror = "1.0.40"
