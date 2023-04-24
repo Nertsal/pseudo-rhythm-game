@@ -1,9 +1,6 @@
 use super::*;
 
 #[derive(Debug, Clone)]
-pub enum EffectError {}
-
-#[derive(Debug, Clone)]
 pub enum Effect {
     Noop,
     Damage(Box<EffectDamage>),
