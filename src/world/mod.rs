@@ -155,11 +155,7 @@ impl World {
             health: Health::new(Hp::new(2.0)),
             held_items: HeldItems {
                 left_hand: None,
-                right_hand: Some(Item {
-                    on_use: ActionEffect::MeleeAttack {
-                        damage: Hp::new(1.0),
-                    },
-                }),
+                right_hand: Some(Item::sword()),
             },
         });
     }

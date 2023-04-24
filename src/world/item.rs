@@ -20,6 +20,10 @@ pub enum HandId {
 }
 
 impl HeldItems {
+    pub fn get_any_item(&self) -> Option<&Item> {
+        self.left_hand.as_ref().or(self.right_hand.as_ref())
+    }
+
     pub fn get_item(&self, id: ItemId) -> Option<&Item> {
         match id {
             ItemId::LeftHand => self.left_hand.as_ref(),
@@ -40,4 +44,24 @@ impl HeldItems {
             HandId::RightHand => &mut self.right_hand,
         }
     }
+}
+
+impl Item {
+    pub fn sword() -> Self {
+        Self {
+            on_use: ActionEffect::MeleeAttack {
+                damage: Hp::new(1.0),
+            },
+        }
+    }
+
+    // pub fn shield() -> Self {
+    //     todo!()
+    // }
+
+    // pub fn bow() -> Self {
+    //     Self {
+    //         on_use: ActionEffect::
+    //     }
+    // }
 }

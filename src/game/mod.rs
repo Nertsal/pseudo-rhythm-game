@@ -61,7 +61,8 @@ impl geng::State for Game {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
-        crate::util::report_err(self.draw(framebuffer));
+        let result = self.draw(framebuffer);
+        crate::util::report_err(result);
     }
 
     fn update(&mut self, delta_time: f64) {

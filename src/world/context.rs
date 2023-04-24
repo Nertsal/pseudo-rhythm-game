@@ -36,14 +36,18 @@ impl EffectTarget {
         }
     }
 
+    pub fn find_unit(self, world: &World) -> ContextResult<UnitId> {
+        match self {
+            EffectTarget::Unit(unit) => Ok(unit),
+            EffectTarget::Position(target_pos) => world.get_unit_at(target_pos),
+        }
+    }
+
     pub fn find_pos(self, world: &World) -> ComponentResult<vec2<Coord>> {
         match self {
-            EffectTarget::Unit(unit) => Ok(world
-                .units
-                .grid_position
-                .get(unit)
-                .copied()
-                .expect("Unit not found")),
+            EffectTarget::Unit(unit) => {
+                Ok(*world.units.grid_position.get(unit).expect("Unit not found"))
+            }
             EffectTarget::Position(pos) => Ok(pos),
         }
     }

@@ -6,7 +6,7 @@ const HOVERED_COLOR: Rgba<f32> = Rgba {
     b: 0.2,
     a: 1.0,
 };
-const CLAMPED_COLOR: Rgba<f32> = Rgba {
+const ACTION_COLOR: Rgba<f32> = Rgba {
     r: 0.2,
     g: 0.1,
     b: 0.1,
@@ -55,16 +55,31 @@ impl Game {
     fn draw_hovered(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
 
-        let &player_pos = self
+        let player_items = self
             .world
             .units
-            .grid_position
+            .held_items
             .get(self.world.player.unit)
             .expect("Player not found");
+
         let hovered = self.world.grid.world_to_grid(self.cursor_world_pos).0;
-        let delta = hovered - player_pos;
-        let clamped = player_pos + crate::util::vec_to_dir(delta.map(|x| x as f32));
-        for (mesh, color) in [(hovered, HOVERED_COLOR), (clamped, CLAMPED_COLOR)]
+
+        let mut highlight = vec![(hovered, HOVERED_COLOR)];
+
+        let action_input = self.get_action_input();
+        let action_target = player_items.get_any_item().map(|item| {
+            item.on_use
+                .aim_assist(&self.world, self.world.player.unit, action_input)
+        });
+        if let Some(target) = action_target {
+            let target = target.find_pos(&self.world)?;
+            highlight.push((target, ACTION_COLOR));
+        }
+
+        // let delta = hovered - player_pos;
+        // player_pos + crate::util::vec_to_dir(delta.map(|x| x as f32));
+
+        for (mesh, color) in highlight
             .into_iter()
             .map(|(pos, color)| (cell_mesh(pos, &self.world.grid), color))
         {
@@ -90,61 +105,6 @@ impl Game {
                     ..default()
                 },
             )
-        }
-
-        Ok(())
-    }
-
-    fn draw_units(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
-        #[derive(StructQuery)]
-        struct Item<'a> {
-            grid_position: &'a vec2<i64>,
-            unit: &'a Option<UnitAI>,
-            fraction: &'a Fraction,
-        }
-
-        let radius = 0.9 * self.world.grid.cell_size.x.min(self.world.grid.cell_size.y) / 2.0;
-        for (id, item) in &query_item!(self.world.units) {
-            let &pos = item.grid_position;
-            let pos = self.world.grid.grid_to_world(pos) + self.world.grid.cell_size / 2.0;
-            let color = if id == self.world.player.unit {
-                Rgba::BLUE
-            } else {
-                match item.fraction {
-                    Fraction::Player => Rgba::GREEN,
-                    Fraction::Enemy => Rgba::RED,
-                }
-            };
-            self.geng.draw_2d(
-                framebuffer,
-                &self.camera,
-                &draw_2d::Ellipse::circle(pos, radius * 0.9, color),
-            );
-
-            let beat_time = if id == self.world.player.unit {
-                Some(1.0 - self.world.player_beat_time.as_f32())
-            } else if let Some(unit) = item.unit {
-                Some(unit.next_beat.as_f32())
-            } else {
-                None
-            };
-            if let Some(beat_time) = beat_time {
-                let arc = Arc {
-                    angle_min: 0.0 - f32::PI,
-                    angle_max: f32::PI * (2.0 * beat_time - 1.0),
-                    center: pos,
-                    radius_inner: radius * 0.3,
-                    radius_outer: radius * 0.6,
-                    color: color.map_rgb(|x| x * 0.5),
-                };
-                draw_arc(
-                    &arc,
-                    &self.assets.shaders.arc,
-                    &self.geng,
-                    framebuffer,
-                    &self.camera,
-                );
-            }
         }
 
         Ok(())
@@ -212,6 +172,59 @@ impl Game {
             ),
             ugli::DrawParameters::default(),
         );
+
+        Ok(())
+    }
+
+    fn draw_units(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            grid_position: &'a vec2<i64>,
+            unit: &'a Option<UnitAI>,
+            fraction: &'a Fraction,
+        }
+
+        let radius = 0.9 * self.world.grid.cell_size.x.min(self.world.grid.cell_size.y) / 2.0;
+        for (id, item) in &query_item!(self.world.units) {
+            let &pos = item.grid_position;
+            let pos = self.world.grid.grid_to_world(pos) + self.world.grid.cell_size / 2.0;
+            let color = if id == self.world.player.unit {
+                Rgba::BLUE
+            } else {
+                match item.fraction {
+                    Fraction::Player => Rgba::GREEN,
+                    Fraction::Enemy => Rgba::RED,
+                }
+            };
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Ellipse::circle(pos, radius * 0.9, color),
+            );
+
+            let beat_time = if id == self.world.player.unit {
+                Some(1.0 - self.world.player_beat_time.as_f32())
+            } else {
+                item.unit.as_ref().map(|unit| unit.next_beat.as_f32())
+            };
+            if let Some(beat_time) = beat_time {
+                let arc = Arc {
+                    angle_min: 0.0 - f32::PI,
+                    angle_max: f32::PI * (2.0 * beat_time - 1.0),
+                    center: pos,
+                    radius_inner: radius * 0.3,
+                    radius_outer: radius * 0.6,
+                    color: color.map_rgb(|x| x * 0.5),
+                };
+                draw_arc(
+                    &arc,
+                    &self.assets.shaders.arc,
+                    &self.geng,
+                    framebuffer,
+                    &self.camera,
+                );
+            }
+        }
 
         Ok(())
     }

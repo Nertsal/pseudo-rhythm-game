@@ -14,11 +14,10 @@
 
 **Actions:**
 - Move to the neigbour cell
-- Attack
-- Block
+- Use an item in hand
 
 **Enemies:**
-- Act rhythmically in one of two ways
+- Act rhythmically in one of two ways (see [[Enemy Beat]])
 - May do multiple [[Action]]s per [[Beat]]
 
 **Enemy beat:**
@@ -26,7 +25,7 @@
 2. Based on real time, i.e. with their own bpm independent of the player's speed.
 
 **Unit** (player and enemies):
-- Can stay in place or move to a cell in [[Von Neumann neighborhood]].
+- See [[Action]].
 - Can hold up to 2 items (1 for each hand), and use either of them.
 - So, unit has 4 actions to choose from on every [[Beat]]: stay, move, use left hand item, use right hand item.
 
@@ -47,7 +46,3 @@
 		- Hits any unit that happens to be on the line.
 	2. Ballistic
 		- Travels over other units directly to the target.
-
-
-
-
