@@ -55,7 +55,12 @@ impl Game {
     fn draw_hovered(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
         let framebuffer_size = framebuffer.size().map(|x| x as f32);
 
-        let &player_pos = self.world.units.grid_position.get(self.world.player.unit)?;
+        let &player_pos = self
+            .world
+            .units
+            .grid_position
+            .get(self.world.player.unit)
+            .expect("Player not found");
         let hovered = self.world.grid.world_to_grid(self.cursor_world_pos).0;
         let delta = hovered - player_pos;
         let clamped = player_pos + crate::util::vec_to_dir(delta.map(|x| x as f32));
@@ -91,14 +96,21 @@ impl Game {
     }
 
     fn draw_units(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            grid_position: &'a vec2<i64>,
+            unit: &'a Option<UnitAI>,
+            fraction: &'a Fraction,
+        }
+
         let radius = 0.9 * self.world.grid.cell_size.x.min(self.world.grid.cell_size.y) / 2.0;
-        for (id, &pos) in self.world.units.grid_position.iter() {
+        for (id, item) in &query_item!(self.world.units) {
+            let &pos = item.grid_position;
             let pos = self.world.grid.grid_to_world(pos) + self.world.grid.cell_size / 2.0;
             let color = if id == self.world.player.unit {
                 Rgba::BLUE
             } else {
-                let fraction = self.world.units.fraction.get(id)?;
-                match fraction {
+                match item.fraction {
                     Fraction::Player => Rgba::GREEN,
                     Fraction::Enemy => Rgba::RED,
                 }
@@ -111,7 +123,7 @@ impl Game {
 
             let beat_time = if id == self.world.player.unit {
                 Some(1.0 - self.world.player_beat_time.as_f32())
-            } else if let Ok(unit) = self.world.units.unit.get(id) {
+            } else if let Some(unit) = item.unit {
                 Some(unit.next_beat.as_f32())
             } else {
                 None
@@ -139,9 +151,17 @@ impl Game {
     }
 
     fn draw_particles(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
-        for particle in self.world.particles.iter() {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            position: &'a vec2<FCoord>,
+            color: &'a Color,
+            lifetime: &'a Health,
+            size: &'a FCoord,
+        }
+
+        for (_, particle) in &query_item!(self.world.particles) {
             let pos = particle.position.map(FCoord::as_f32);
-            let color = particle.color;
+            let color = *particle.color;
             let t = particle.lifetime.get_ratio().as_f32();
             let t = crate::util::smooth_step(t);
             let radius = particle.size.as_f32() / 2.0 * t;

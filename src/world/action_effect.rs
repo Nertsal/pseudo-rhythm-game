@@ -24,10 +24,17 @@ impl ActionEffect {
                 let (target, target_pos) = match input.target {
                     EffectTarget::Unit(unit) => {
                         // Check validity
-                        (Some(unit), *world.units.grid_position.get(unit)?)
+                        (
+                            Some(unit),
+                            *world.units.grid_position.get(unit).expect("Unit not found"),
+                        )
                     }
                     EffectTarget::Position(target_pos) => {
-                        let &player_pos = world.units.grid_position.get(player)?;
+                        let &player_pos = world
+                            .units
+                            .grid_position
+                            .get(player)
+                            .expect("Unit not found");
                         let delta = target_pos - player_pos;
                         let target_pos =
                             player_pos + crate::util::vec_to_dir(delta.map(|x| x as f32));

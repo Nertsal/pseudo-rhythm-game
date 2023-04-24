@@ -3,8 +3,8 @@
 use geng::prelude::*;
 
 mod assets;
+mod collection;
 mod game;
-mod id;
 mod sound;
 mod util;
 mod world;

@@ -1,3 +1,4 @@
+use ecs::prelude::*;
 use geng::{prelude::*, Camera2d};
 
 use crate::{

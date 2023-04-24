@@ -38,7 +38,12 @@ impl EffectTarget {
 
     pub fn find_pos(self, world: &World) -> ComponentResult<vec2<Coord>> {
         match self {
-            EffectTarget::Unit(unit) => world.units.grid_position.get(unit).copied(),
+            EffectTarget::Unit(unit) => Ok(world
+                .units
+                .grid_position
+                .get(unit)
+                .copied()
+                .expect("Unit not found")),
             EffectTarget::Position(pos) => Ok(pos),
         }
     }

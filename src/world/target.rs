@@ -45,7 +45,7 @@ impl TargetSelector {
         if let TargetFilter::Own = self.filter {
             eval_unit(unit)?;
         } else {
-            for (id, ()) in world.units.ids().iter() {
+            for id in world.units.ids() {
                 if id != unit
                     // && (id == world.player.unit || world.units.unit.contains(id))
                     && self.filter.check(id, world, unit)?
@@ -70,8 +70,8 @@ impl TargetFilter {
 
 impl FractionFilter {
     pub fn check_query(self, target: UnitId, world: &World, unit: UnitId) -> ComponentResult<bool> {
-        let &unit = world.units.fraction.get(unit)?;
-        let &target = world.units.fraction.get(target)?;
+        let &unit = world.units.fraction.get(unit).expect("Unit not found");
+        let &target = world.units.fraction.get(target).expect("Unit not found");
         Ok(self.check(unit, target))
     }
 
@@ -94,8 +94,12 @@ impl TargetFitness {
         match self {
             TargetFitness::Negative(fitness) => Ok(-fitness.evaluate(target, world, unit)?),
             TargetFitness::Distance => {
-                let &pos = world.units.grid_position.get(unit)?;
-                let &target_pos = world.units.grid_position.get(target)?;
+                let &pos = world.units.grid_position.get(unit).expect("Unit not found");
+                let &target_pos = world
+                    .units
+                    .grid_position
+                    .get(target)
+                    .expect("Unit not found");
                 let delta = target_pos - pos;
                 let distance = crate::util::king_distance(delta);
                 Ok(Fitness::new(distance as f32))

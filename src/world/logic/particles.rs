@@ -26,7 +26,7 @@ impl World {
                 size: FCoord::new(0.3),
                 color,
             };
-            self.particles.push(particle);
+            self.particles.insert(particle);
         }
 
         Ok(())
@@ -35,8 +35,17 @@ impl World {
 
 impl Logic<'_> {
     pub fn process_particles(&mut self) {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            lifetime: &'a mut Health,
+            position: &'a mut vec2<FCoord>,
+            velocity: &'a vec2<FCoord>,
+        }
+
         let mut dead = Vec::new();
-        for (id, particle) in self.world.particles.iter_mut().enumerate() {
+        let mut query = query_item!(self.world.particles);
+        let mut iter = query.iter_mut();
+        while let Some((id, particle)) = iter.next() {
             particle.lifetime.damage(self.delta_time);
             if particle.lifetime.is_dead() {
                 dead.push(id);
@@ -44,11 +53,11 @@ impl Logic<'_> {
             }
 
             // particle.size = particle.lifetime.get_ratio();
-            particle.position += particle.velocity * self.delta_time;
+            *particle.position += *particle.velocity * self.delta_time;
         }
 
         for id in dead.into_iter().rev() {
-            self.world.particles.swap_remove(id);
+            self.world.particles.remove(id);
         }
     }
 }

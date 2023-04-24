@@ -15,8 +15,17 @@ impl Logic<'_> {
     }
 
     fn process_units(&mut self) -> SystemResult<()> {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            unit: &'a mut Option<UnitAI>,
+        }
+
         let mut actions = Vec::new();
         for (id, unit) in self.world.units.unit.iter_mut() {
+            let Some(unit) = unit else {
+                continue;
+            };
+
             let bpm = unit.beat.calc_bpm(self.world.beat_controller.get_bpm());
             let beat_time = Time::new(60.0 / bpm);
 
@@ -35,7 +44,14 @@ impl Logic<'_> {
         }
 
         for id in actions {
-            let unit = self.world.units.unit.get(id)?;
+            let unit = self
+                .world
+                .units
+                .unit
+                .get(id)
+                .expect("Unit not found")
+                .as_ref()
+                .expect("Unit AI not found");
             if let Some((action, input)) = unit.behaviour.evaluate(self.world, id)? {
                 self.world.unit_action(id, action, input)?;
             }
@@ -58,6 +74,10 @@ impl World {
 
         // Synchronize units
         for (_, unit) in self.units.unit.iter_mut() {
+            let Some(unit) = unit else {
+                continue;
+            };
+
             if let UnitBeat::Synchronized {
                 player: player_beats,
                 current_beat,
@@ -114,7 +134,7 @@ impl World {
     }
 
     fn unit_move(&mut self, unit: UnitId, action: ActionMove) -> SystemResult<()> {
-        let &pos = self.units.grid_position.get(unit)?;
+        let &pos = self.units.grid_position.get(unit).expect("Unit not found");
         match action {
             ActionMove::Slide(slide) => self.unit_slide(unit, slide)?,
             ActionMove::Teleport(_tp) => {
@@ -122,7 +142,7 @@ impl World {
             }
         }
 
-        if Ok(&pos) != self.units.grid_position.get(unit) {
+        if Some(&pos) != self.units.grid_position.get(unit) {
             // Unit actually moved
             self.spawn_particles(pos, Color::BLUE)?;
         }
@@ -136,7 +156,7 @@ impl World {
             todo!("Only single-tile slide move implemented");
         }
 
-        let &pos = self.units.grid_position.get(unit)?;
+        let &pos = self.units.grid_position.get(unit).expect("Unit not found");
 
         let target = pos + slide.delta;
 
@@ -150,7 +170,11 @@ impl World {
             return Ok(());
         }
 
-        self.units.grid_position.update(unit, target)?;
+        *self
+            .units
+            .grid_position
+            .get_mut(unit)
+            .expect("Unit not found") = target;
         Ok(())
     }
 
@@ -162,9 +186,9 @@ impl World {
     }
 
     pub fn unit_damage(&mut self, unit: UnitId, damage: Hp) -> SystemResult<()> {
-        let &pos = self.units.grid_position.get(unit)?;
+        let &pos = self.units.grid_position.get(unit).expect("Unit not found");
 
-        let health = self.units.health.get_mut(unit)?;
+        let health = self.units.health.get_mut(unit).expect("Unit not found");
         health.damage(damage);
         if health.is_dead() {
             // Unit died
@@ -182,7 +206,7 @@ impl World {
         action: ActionUseItem,
         input: ActionInput,
     ) -> SystemResult<()> {
-        let items = self.units.held_items.get(unit)?;
+        let items = self.units.held_items.get(unit).expect("Unit not found");
         let Some(item) = items.get_item(action.item) else {
             debug!("Tried using item from an empty hand");
             return Ok(());

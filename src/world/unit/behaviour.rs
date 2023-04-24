@@ -96,7 +96,7 @@ impl UnitBehaviour {
             Self::MoveToTarget => {
                 let target = context.expect_target()?;
                 let target_pos = target.find_pos(world)?;
-                let &pos = world.units.grid_position.get(unit)?;
+                let &pos = world.units.grid_position.get(unit).expect("Unit not found");
                 let delta = target_pos - pos;
                 let move_delta = crate::util::vec_to_dir(delta.map(|x| x as f32));
                 Ok(Some((
@@ -137,7 +137,7 @@ impl BehaviourCondition {
         match self {
             &BehaviourCondition::TargetInRange { distance } => match context {
                 BehaviourContext::Target(target) => {
-                    let &pos = world.units.grid_position.get(unit)?;
+                    let &pos = world.units.grid_position.get(unit).expect("Unit not found");
                     let target_pos = target.find_pos(world)?;
                     Ok(crate::util::king_distance(target_pos - pos) <= distance)
                 }

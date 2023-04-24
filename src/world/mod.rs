@@ -1,7 +1,8 @@
+use ecs::prelude::*;
 use geng::prelude::*;
 
 use crate::{
-    id::{Id, IdGenerator},
+    collection::{Collection, Id},
     sound::{
         BeatConfig, BeatController, MusicConfig, MusicController, SectionName, Synthesizer, Ticks,
     },
@@ -46,8 +47,8 @@ pub struct World {
     pub music_controller: MusicController,
     /// Normalized (in range 0..1) time since the last player's beat.
     pub player_beat_time: Time,
-    pub units: Units,
-    pub particles: Vec<Particle>,
+    pub units: StructOf<Collection<Unit>>,
+    pub particles: StructOf<Vec<Particle>>,
 }
 
 pub type SystemResult<T> = Result<T, SystemError>;
@@ -62,7 +63,7 @@ pub enum SystemError {
     Behaviour(#[from] BehaviourError),
 }
 
-#[derive(Debug, Clone)]
+#[derive(StructOf, Debug, Clone)]
 pub struct Particle {
     pub position: vec2<FCoord>,
     pub velocity: vec2<FCoord>,
@@ -88,9 +89,24 @@ impl World {
             ticks_per_beat: music_config.ticks_per_beat,
             ..default()
         };
-        let mut units = Units::new();
 
-        let player_unit = units.spawn();
+        let mut units = StructOf::<Collection<Unit>>::new();
+
+        let player_unit = units.insert(Unit {
+            grid_position: vec2::ZERO,
+            world_position: vec2::ZERO,
+            unit: None,
+            health: Health::new(Hp::new(10.0)),
+            fraction: Fraction::Player,
+            held_items: HeldItems {
+                left_hand: None,
+                right_hand: Some(Item {
+                    on_use: ActionEffect::MeleeAttack {
+                        damage: Hp::new(2.0),
+                    },
+                }),
+            },
+        });
 
         let mut world = Self {
             geng: geng.clone(),
@@ -104,85 +120,47 @@ impl World {
             beat_controller: BeatController::new(beat_config),
             player_beat_time: Time::ZERO,
             units,
-            particles: Vec::new(),
+            particles: StructOf::new(),
         };
         world.init();
         world
     }
 
     fn init(&mut self) {
-        let player = self.player.unit;
-        self.units.grid_position.insert(player, vec2::ZERO).unwrap();
-        self.units
-            .health
-            .insert(player, Health::new(Hp::new(10.0)))
-            .unwrap();
-        self.units
-            .fraction
-            .insert(player, Fraction::Player)
-            .unwrap();
-        self.units
-            .held_items
-            .insert(
-                player,
-                HeldItems {
-                    left_hand: None,
-                    right_hand: Some(Item {
-                        on_use: ActionEffect::MeleeAttack {
-                            damage: Hp::new(2.0),
-                        },
-                    }),
+        self.units.insert(Unit {
+            unit: Some(UnitAI {
+                beat: UnitBeat::Synchronized {
+                    unit: 1,
+                    player: 2,
+                    current_beat: 0,
                 },
-            )
-            .unwrap();
-
-        let enemy = self.units.spawn();
-        self.units.grid_position.insert(enemy, vec2(2, 1)).unwrap();
-        self.units
-            .health
-            .insert(enemy, Health::new(Hp::new(2.0)))
-            .unwrap();
-        self.units.fraction.insert(enemy, Fraction::Enemy).unwrap();
-        self.units
-            .held_items
-            .insert(
-                enemy,
-                HeldItems {
-                    left_hand: None,
-                    right_hand: Some(Item {
-                        on_use: ActionEffect::MeleeAttack {
-                            damage: Hp::new(1.0),
-                        },
-                    }),
-                },
-            )
-            .unwrap();
-        self.units
-            .unit
-            .insert(
-                enemy,
-                UnitAI {
-                    beat: UnitBeat::Synchronized {
-                        unit: 1,
-                        player: 2,
-                        current_beat: 0,
+                next_beat: Time::ONE,
+                behaviour: UnitBehaviour::SelectTarget {
+                    selector: TargetSelector {
+                        filter: TargetFilter::Fraction(FractionFilter::Enemy),
+                        fitness: TargetFitness::Negative(Box::new(TargetFitness::Distance)),
                     },
-                    next_beat: Time::ONE,
-                    behaviour: UnitBehaviour::SelectTarget {
-                        selector: TargetSelector {
-                            filter: TargetFilter::Fraction(FractionFilter::Enemy),
-                            fitness: TargetFitness::Negative(Box::new(TargetFitness::Distance)),
-                        },
-                        then_behave: Box::new(UnitBehaviour::If {
-                            condition: BehaviourCondition::TargetInRange { distance: 1 },
-                            then_behave: Box::new(UnitBehaviour::UseItemOnTarget {
-                                item: ItemId::RightHand,
-                            }),
-                            else_behave: Box::new(UnitBehaviour::MoveToTarget),
+                    then_behave: Box::new(UnitBehaviour::If {
+                        condition: BehaviourCondition::TargetInRange { distance: 1 },
+                        then_behave: Box::new(UnitBehaviour::UseItemOnTarget {
+                            item: ItemId::RightHand,
                         }),
-                    },
+                        else_behave: Box::new(UnitBehaviour::MoveToTarget),
+                    }),
                 },
-            )
-            .unwrap()
+            }),
+            fraction: Fraction::Enemy,
+            grid_position: vec2(2, 1),
+            world_position: vec2::ZERO,
+            health: Health::new(Hp::new(2.0)),
+            held_items: HeldItems {
+                left_hand: None,
+                right_hand: Some(Item {
+                    on_use: ActionEffect::MeleeAttack {
+                        damage: Hp::new(1.0),
+                    },
+                }),
+            },
+        });
     }
 }
