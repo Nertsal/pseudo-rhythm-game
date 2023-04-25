@@ -3,8 +3,16 @@ use super::*;
 #[derive(Debug, Clone)]
 pub enum Effect {
     Noop,
+    If(Box<EffectIf>),
     Damage(Box<EffectDamage>),
     Particles(Box<EffectParticles>),
+}
+
+#[derive(Debug, Clone)]
+pub struct EffectIf {
+    pub condition: Condition,
+    pub then: Effect,
+    pub otherwise: Effect,
 }
 
 #[derive(Debug, Clone)]
@@ -20,10 +28,23 @@ pub struct EffectParticles {
 
 impl Effect {
     pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
+        debug!("Applying effect {self:?} with context {context:?}");
         match self {
             Effect::Noop => Ok(()),
+            Effect::If(effect) => effect.apply(world, context),
             Effect::Damage(effect) => effect.apply(world, context),
             Effect::Particles(effect) => effect.apply(world, context),
+        }
+    }
+}
+
+impl EffectIf {
+    pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
+        let condition = self.condition.evaluate(world, &context)?;
+        if condition {
+            self.then.apply(world, context)
+        } else {
+            self.otherwise.apply(world, context)
         }
     }
 }
@@ -31,11 +52,15 @@ impl Effect {
 impl EffectDamage {
     pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
         let target = context.expect_target()?;
-        let unit = target.expect_unit()?;
-
-        // let &pos = world.units.grid_position.get(target)?;
-        world.unit_damage(unit, self.value)?;
-        // world.spawn_particles(pos, Color::WHITE)?;
+        match target.find_unit(world) {
+            Ok(unit) => {
+                world.unit_damage(unit, self.value)?;
+            }
+            Err(_) => {
+                let pos = target.find_pos(world)?;
+                world.spawn_particles(pos, Color::WHITE)?;
+            }
+        }
         Ok(())
     }
 }

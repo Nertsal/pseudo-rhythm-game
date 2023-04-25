@@ -67,12 +67,14 @@ impl Game {
         let mut highlight = vec![(hovered, HOVERED_COLOR)];
 
         let action_input = self.get_action_input();
-        let action_target = player_items.get_any_item().map(|item| {
+        let action_target = player_items.get_any_item().and_then(|item| {
             item.on_use
-                .aim_assist(&self.world, self.world.player.unit, action_input)
+                .aim
+                .assist(&self.world, self.world.player.unit, action_input.target)
+                .transpose()
         });
         if let Some(target) = action_target {
-            let target = target.find_pos(&self.world)?;
+            let target = target?.find_pos(&self.world)?;
             highlight.push((target, ACTION_COLOR));
         }
 

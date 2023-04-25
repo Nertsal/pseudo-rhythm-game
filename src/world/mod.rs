@@ -11,6 +11,7 @@ use crate::{
 mod action;
 mod action_effect;
 mod component;
+mod condition;
 mod context;
 mod effect;
 mod grid;
@@ -24,6 +25,7 @@ mod unit;
 pub use action::*;
 pub use action_effect::*;
 pub use component::*;
+pub use condition::*;
 pub use context::*;
 pub use effect::*;
 pub use grid::*;
@@ -100,11 +102,7 @@ impl World {
             fraction: Fraction::Player,
             held_items: HeldItems {
                 left_hand: None,
-                right_hand: Some(Item {
-                    on_use: ActionEffect::MeleeAttack {
-                        damage: Hp::new(2.0),
-                    },
-                }),
+                right_hand: Some(Item::sword(Hp::new(2.0))),
             },
         });
 
@@ -155,7 +153,7 @@ impl World {
             health: Health::new(Hp::new(2.0)),
             held_items: HeldItems {
                 left_hand: None,
-                right_hand: Some(Item::sword()),
+                right_hand: Some(Item::sword(Hp::new(1.0))),
             },
         });
     }

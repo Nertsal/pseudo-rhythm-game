@@ -47,10 +47,11 @@ impl HeldItems {
 }
 
 impl Item {
-    pub fn sword() -> Self {
+    pub fn sword(damage: Hp) -> Self {
         Self {
-            on_use: ActionEffect::MeleeAttack {
-                damage: Hp::new(1.0),
+            on_use: ActionEffect {
+                aim: ActionAim::InRange { distance: 1 },
+                effect: Effect::Damage(Box::new(EffectDamage { value: damage })),
             },
         }
     }
