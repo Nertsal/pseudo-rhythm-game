@@ -10,17 +10,49 @@ struct Logic<'a> {
 
 impl Logic<'_> {
     pub fn process(&mut self) -> SystemResult<()> {
-        self.process_units()?;
+        self.process_projectiles()?;
+
+        self.process_units_pos()?;
+        self.process_units_ai()?;
+
         self.process_particles();
         Ok(())
     }
 
-    fn process_units(&mut self) -> SystemResult<()> {
+    fn process_projectiles(&mut self) -> SystemResult<()> {
         #[derive(StructQuery)]
         struct Item<'a> {
-            unit: &'a mut Option<UnitAI>,
+            world_position: &'a mut vec2<FCoord>,
+            velocity: &'a vec2<FCoord>,
         }
 
+        let mut query = query_item!(self.world.projectiles);
+        let mut iter = query.iter_mut();
+        while let Some((_, item)) = iter.next() {
+            *item.world_position += *item.velocity * self.delta_time;
+        }
+
+        Ok(())
+    }
+
+    fn process_units_pos(&mut self) -> SystemResult<()> {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            grid_position: &'a vec2<Coord>,
+            world_position: &'a mut vec2<FCoord>,
+        }
+
+        let mut query = query_item!(self.world.units);
+        let mut iter = query.iter_mut();
+        while let Some((_, item)) = iter.next() {
+            // TODO: interpolate
+            *item.world_position = self.world.grid.grid_to_world(*item.grid_position);
+        }
+
+        Ok(())
+    }
+
+    fn process_units_ai(&mut self) -> SystemResult<()> {
         let mut actions = Vec::new();
         for (id, unit) in self.world.units.unit.iter_mut() {
             let Some(unit) = unit else {

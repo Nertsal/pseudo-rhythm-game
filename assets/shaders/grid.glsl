@@ -25,7 +25,7 @@ void main() {
     vec4 odd_color = vec4(0.15, 0.15, 0.15, 1.0);
 
     mat3 screen_to_grid = inverse(u_projection_matrix * u_view_matrix * u_grid_matrix);
-    vec2 grid_pos = into_2d(vec3(v_pos, 1.0) * screen_to_grid);
+    vec2 grid_pos = into_2d(vec3(v_pos, 1.0) * screen_to_grid) + 0.5;
 
     ivec2 grid_ipos = ivec2(floor(grid_pos));
 

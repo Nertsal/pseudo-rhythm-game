@@ -19,6 +19,7 @@ mod health;
 mod item;
 mod logic;
 mod player;
+mod projectile;
 mod target;
 mod unit;
 
@@ -33,6 +34,7 @@ pub use health::*;
 pub use item::*;
 pub use logic::*;
 pub use player::*;
+pub use projectile::*;
 pub use target::*;
 pub use unit::*;
 
@@ -50,6 +52,7 @@ pub struct World {
     /// Normalized (in range 0..1) time since the last player's beat.
     pub player_beat_time: Time,
     pub units: StructOf<Collection<Unit>>,
+    pub projectiles: StructOf<Collection<Projectile>>,
     pub particles: StructOf<Vec<Particle>>,
 }
 
@@ -101,7 +104,7 @@ impl World {
             health: Health::new(Hp::new(10.0)),
             fraction: Fraction::Player,
             held_items: HeldItems {
-                left_hand: None,
+                left_hand: Some(Item::bow(Hp::new(1.0), FCoord::new(3.0))),
                 right_hand: Some(Item::sword(Hp::new(2.0))),
             },
         });
@@ -118,6 +121,7 @@ impl World {
             beat_controller: BeatController::new(beat_config),
             player_beat_time: Time::ZERO,
             units,
+            projectiles: StructOf::new(),
             particles: StructOf::new(),
         };
         world.init();

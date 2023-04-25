@@ -5,6 +5,7 @@ pub enum Effect {
     Noop,
     If(Box<EffectIf>),
     Damage(Box<EffectDamage>),
+    Projectile(Box<EffectProjectile>),
     Particles(Box<EffectParticles>),
 }
 
@@ -21,6 +22,12 @@ pub struct EffectDamage {
 }
 
 #[derive(Debug, Clone)]
+pub struct EffectProjectile {
+    pub projectile: ProjectilePrefab,
+    pub speed: FCoord,
+}
+
+#[derive(Debug, Clone)]
 pub struct EffectParticles {
     pub pos: vec2<Coord>,
     pub color: Color,
@@ -33,6 +40,7 @@ impl Effect {
             Effect::Noop => Ok(()),
             Effect::If(effect) => effect.apply(world, context),
             Effect::Damage(effect) => effect.apply(world, context),
+            Effect::Projectile(effect) => effect.apply(world, context),
             Effect::Particles(effect) => effect.apply(world, context),
         }
     }
@@ -61,6 +69,45 @@ impl EffectDamage {
                 world.spawn_particles(pos, Color::WHITE)?;
             }
         }
+        Ok(())
+    }
+}
+
+impl EffectProjectile {
+    pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
+        let caster = context.expect_caster()?;
+        // let &grid_position = world
+        //     .units
+        //     .grid_position
+        //     .get(caster.unit)
+        //     .expect("Unit not found");
+        let &world_position = world
+            .units
+            .world_position
+            .get(caster.unit)
+            .expect("Unit not found");
+        let &fraction = world
+            .units
+            .fraction
+            .get(caster.unit)
+            .expect("Unit not found");
+
+        let target = context.expect_target()?;
+        let target_pos = target.find_world_pos(world)?;
+
+        let delta = target_pos - world_position;
+        let dir = delta.normalize_or_zero();
+        let velocity = dir * self.speed;
+
+        let inst = ProjectileInst {
+            // grid_position,
+            world_position,
+            velocity,
+            fraction,
+            target_filter: FractionFilter::Enemy,
+        };
+        let projectile = self.projectile.instantiate(inst);
+        world.projectiles.insert(projectile);
         Ok(())
     }
 }

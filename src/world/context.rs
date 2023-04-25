@@ -51,6 +51,17 @@ impl EffectTarget {
             EffectTarget::Position(pos) => Ok(pos),
         }
     }
+
+    pub fn find_world_pos(self, world: &World) -> ComponentResult<vec2<FCoord>> {
+        match self {
+            EffectTarget::Unit(unit) => Ok(*world
+                .units
+                .world_position
+                .get(unit)
+                .expect("Unit not found")),
+            EffectTarget::Position(pos) => Ok(world.grid.grid_to_world(pos)),
+        }
+    }
 }
 
 impl EffectContext {

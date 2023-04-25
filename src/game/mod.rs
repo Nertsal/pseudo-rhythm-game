@@ -52,7 +52,12 @@ impl Game {
     }
 
     fn get_action_input(&self) -> ActionInput {
-        let target = EffectTarget::Position(self.world.grid.world_to_grid(self.cursor_world_pos).0);
+        let target = EffectTarget::Position(
+            self.world
+                .grid
+                .world_to_grid(self.cursor_world_pos.map(FCoord::new))
+                .0,
+        );
         ActionInput { target }
     }
 }

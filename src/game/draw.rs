@@ -18,6 +18,7 @@ impl Game {
         self.draw_grid(framebuffer)?;
         self.draw_hovered(framebuffer)?;
         self.draw_units(framebuffer)?;
+        self.draw_projectiles(framebuffer)?;
         self.draw_particles(framebuffer)?;
         self.draw_sound(framebuffer)?;
         Ok(())
@@ -39,7 +40,7 @@ impl Game {
             &screen_vs,
             (
                 ugli::uniforms! {
-                    u_grid_matrix: self.world.grid.matrix(),
+                    u_grid_matrix: self.world.grid.matrix().map(FCoord::as_f32),
                 },
                 geng::camera2d_uniforms(&self.camera, framebuffer_size),
             ),
@@ -62,7 +63,11 @@ impl Game {
             .get(self.world.player.unit)
             .expect("Player not found");
 
-        let hovered = self.world.grid.world_to_grid(self.cursor_world_pos).0;
+        let hovered = self
+            .world
+            .grid
+            .world_to_grid(self.cursor_world_pos.map(FCoord::new))
+            .0;
 
         let mut highlight = vec![(hovered, HOVERED_COLOR)];
 
@@ -178,18 +183,58 @@ impl Game {
         Ok(())
     }
 
+    fn draw_projectiles(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            world_position: &'a vec2<FCoord>,
+            fraction: &'a Fraction,
+        }
+
+        let radius = 0.4
+            * self
+                .world
+                .grid
+                .cell_size
+                .x
+                .min(self.world.grid.cell_size.y)
+                .as_f32()
+            / 2.0;
+        for (_, item) in &query_item!(self.world.projectiles) {
+            let pos = item.world_position.map(FCoord::as_f32);
+            let color = match item.fraction {
+                Fraction::Player => Rgba::opaque(0.6, 1.0, 0.6),
+                Fraction::Enemy => Rgba::opaque(1.0, 0.6, 0.6),
+            };
+            self.geng.draw_2d(
+                framebuffer,
+                &self.camera,
+                &draw_2d::Ellipse::circle(pos, radius * 0.9, color),
+            );
+        }
+
+        Ok(())
+    }
+
     fn draw_units(&self, framebuffer: &mut ugli::Framebuffer) -> SystemResult<()> {
         #[derive(StructQuery)]
         struct Item<'a> {
-            grid_position: &'a vec2<i64>,
+            grid_position: &'a vec2<Coord>,
             unit: &'a Option<UnitAI>,
             fraction: &'a Fraction,
         }
 
-        let radius = 0.9 * self.world.grid.cell_size.x.min(self.world.grid.cell_size.y) / 2.0;
+        let radius = 0.9
+            * self
+                .world
+                .grid
+                .cell_size
+                .x
+                .min(self.world.grid.cell_size.y)
+                .as_f32()
+            / 2.0;
         for (id, item) in &query_item!(self.world.units) {
             let &pos = item.grid_position;
-            let pos = self.world.grid.grid_to_world(pos) + self.world.grid.cell_size / 2.0;
+            let pos = self.world.grid.grid_to_world(pos).map(FCoord::as_f32);
             let color = if id == self.world.player.unit {
                 Rgba::BLUE
             } else {
@@ -233,15 +278,15 @@ impl Game {
 }
 
 fn cell_mesh(pos: vec2<Coord>, grid: &Grid) -> Vec<vec2<f32>> {
-    let pos = grid.grid_to_world(pos);
-    let size = grid.cell_size;
+    let pos = grid.grid_to_world(pos).map(FCoord::as_f32);
+    let size = grid.cell_size.map(FCoord::as_f32) / 2.0;
     vec![
-        pos,
-        pos + vec2(size.x, 0.0),
-        pos + vec2(0.0, size.y),
-        pos + vec2(size.x, 0.0),
+        pos - size,
+        pos + vec2(size.x, -size.y),
+        pos + vec2(-size.x, size.y),
+        pos + vec2(size.x, -size.y),
         pos + size,
-        pos + vec2(0.0, size.y),
+        pos + vec2(-size.x, size.y),
     ]
 }
 

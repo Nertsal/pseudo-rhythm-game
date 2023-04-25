@@ -60,9 +60,17 @@ impl Item {
     //     todo!()
     // }
 
-    // pub fn bow() -> Self {
-    //     Self {
-    //         on_use: ActionEffect::
-    //     }
-    // }
+    pub fn bow(damage: Hp, speed: FCoord) -> Self {
+        Self {
+            on_use: ActionEffect {
+                aim: ActionAim::InRange { distance: 5 },
+                effect: Effect::Projectile(Box::new(EffectProjectile {
+                    projectile: ProjectilePrefab {
+                        on_contact: Effect::Damage(Box::new(EffectDamage { value: damage })),
+                    },
+                    speed,
+                })),
+            },
+        }
+    }
 }
