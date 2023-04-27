@@ -1,11 +1,11 @@
 use geng::prelude::*;
 
-#[derive(geng::Assets)]
+#[derive(geng::Load)]
 pub struct Assets {
     pub shaders: Shaders,
 }
 
-#[derive(geng::Assets)]
+#[derive(geng::Load)]
 pub struct Shaders {
     pub color: ugli::Program,
     pub grid: ugli::Program,

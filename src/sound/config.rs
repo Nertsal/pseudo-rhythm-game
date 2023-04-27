@@ -5,8 +5,8 @@ pub type SFName = String;
 pub type SectionName = String;
 pub type Ticks = u32;
 
-#[derive(Debug, Clone, Deserialize, geng::Assets)]
-#[asset(json)]
+#[derive(Debug, Clone, Deserialize, geng::Load)]
+#[load(json)]
 pub struct MusicConfig {
     pub soundfonts: HashMap<SFName, String>,
     pub ticks_per_beat: Ticks,

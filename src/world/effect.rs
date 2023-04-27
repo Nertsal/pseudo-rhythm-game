@@ -35,7 +35,7 @@ pub struct EffectParticles {
 
 impl Effect {
     pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
-        debug!("Applying effect {self:?} with context {context:?}");
+        log::debug!("Applying effect {self:?} with context {context:?}");
         match self {
             Effect::Noop => Ok(()),
             Effect::If(effect) => effect.apply(world, context),

@@ -10,7 +10,7 @@ pub fn king_distance<T: Num + Ord>(vec: vec2<T>) -> T {
 
 pub fn report_err<T, E: Display>(result: Result<T, E>) {
     if let Err(error) = result {
-        error!("Error: {error}");
+        log::error!("Error: {error}");
     }
 }
 

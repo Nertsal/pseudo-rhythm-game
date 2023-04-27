@@ -159,7 +159,7 @@ impl World {
         action: Action,
         input: ActionInput,
     ) -> SystemResult<()> {
-        debug!("Unit {unit:?} executing action {action:?} with input {input:?}");
+        log::debug!("Unit {unit:?} executing action {action:?} with input {input:?}");
         match action {
             Action::Move(action) => self.unit_move(unit, action),
             Action::UseItem(action) => self.unit_use_item(unit, action, input),
@@ -241,7 +241,7 @@ impl World {
     ) -> SystemResult<()> {
         let items = self.units.held_items.get(unit).expect("Unit not found");
         let Some(item) = items.get_item(action.item) else {
-            debug!("Tried using item from an empty hand");
+            log::debug!("Tried using item from an empty hand");
             return Ok(());
         };
 

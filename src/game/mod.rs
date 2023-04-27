@@ -126,14 +126,17 @@ pub fn run(geng: &Geng) -> impl geng::State {
     let future = {
         let geng = geng.clone();
         async move {
-            let assets: Rc<Assets> = geng::LoadAsset::load(&geng, &run_dir().join("assets"))
-                .await
-                .expect("Failed to load assets");
-
-            let config: MusicConfig =
-                geng::LoadAsset::load(&geng, &run_dir().join("assets").join("config.json"))
+            let assets: Rc<Assets> =
+                geng::Load::load(geng.asset_manager(), &run_dir().join("assets"))
                     .await
-                    .expect("Failed to load music config");
+                    .expect("Failed to load assets");
+
+            let config: MusicConfig = geng::Load::load(
+                geng.asset_manager(),
+                &run_dir().join("assets").join("config.json"),
+            )
+            .await
+            .expect("Failed to load music config");
 
             let mut soundfonts = HashMap::new();
             for (sf_name, path) in &config.soundfonts {

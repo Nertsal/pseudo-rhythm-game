@@ -29,7 +29,7 @@ impl Game {
 
         let screen_vs = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)]
             .into_iter()
-            .map(|(x, y)| draw_2d::Vertex { a_pos: vec2(x, y) })
+            .map(|(x, y)| draw2d::Vertex { a_pos: vec2(x, y) })
             .collect();
         let screen_vs = ugli::VertexBuffer::new_dynamic(self.geng.ugli(), screen_vs);
 
@@ -42,7 +42,7 @@ impl Game {
                 ugli::uniforms! {
                     u_grid_matrix: self.world.grid.matrix().map(FCoord::as_f32),
                 },
-                geng::camera2d_uniforms(&self.camera, framebuffer_size),
+                self.camera.uniforms(framebuffer_size),
             ),
             ugli::DrawParameters {
                 blend_mode: Some(ugli::BlendMode::straight_alpha()),
@@ -92,7 +92,7 @@ impl Game {
         {
             let mesh = mesh
                 .into_iter()
-                .map(|a_pos| draw_2d::Vertex { a_pos })
+                .map(|a_pos| draw2d::Vertex { a_pos })
                 .collect();
             let geometry = ugli::VertexBuffer::new_dynamic(self.geng.ugli(), mesh);
             ugli::draw(
@@ -105,7 +105,7 @@ impl Game {
                         u_model_matrix: mat3::identity(),
                         u_color: color,
                     },
-                    geng::camera2d_uniforms(&self.camera, framebuffer_size),
+                    self.camera.uniforms(framebuffer_size),
                 ),
                 ugli::DrawParameters {
                     blend_mode: Some(ugli::BlendMode::straight_alpha()),
@@ -133,10 +133,10 @@ impl Game {
             let t = crate::util::smooth_step(t);
             let radius = particle.size.as_f32() / 2.0 * t;
 
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Ellipse::circle(pos, radius, color),
+                &draw2d::Ellipse::circle(pos, radius, color),
             );
         }
 
@@ -149,10 +149,10 @@ impl Game {
 
         // Visualize beat timer
         let beat_time = (1.0 - self.world.player_beat_time.as_f32()).clamp_range(0.0..=1.0);
-        self.geng.draw_2d(
+        self.geng.draw2d().draw2d(
             framebuffer,
             &geng::PixelPerfectCamera,
-            &draw_2d::Quad::new(
+            &draw2d::Quad::new(
                 Aabb2::point(framebuffer_size * vec2(0.5, 0.95))
                     .extend_symmetric(framebuffer_size * vec2(0.1 * beat_time, 0.01)),
                 Rgba::GRAY,
@@ -175,7 +175,7 @@ impl Game {
                     u_model_matrix: matrix,
                     u_color: Rgba::GRAY,
                 },
-                geng::camera2d_uniforms(&geng::PixelPerfectCamera, framebuffer_size),
+                geng::PixelPerfectCamera.uniforms(framebuffer_size),
             ),
             ugli::DrawParameters::default(),
         );
@@ -205,10 +205,10 @@ impl Game {
                 Fraction::Player => Rgba::opaque(0.6, 1.0, 0.6),
                 Fraction::Enemy => Rgba::opaque(1.0, 0.6, 0.6),
             };
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Ellipse::circle(pos, radius * 0.9, color),
+                &draw2d::Ellipse::circle(pos, radius * 0.9, color),
             );
         }
 
@@ -243,10 +243,10 @@ impl Game {
                     Fraction::Enemy => Rgba::RED,
                 }
             };
-            self.geng.draw_2d(
+            self.geng.draw2d().draw2d(
                 framebuffer,
                 &self.camera,
-                &draw_2d::Ellipse::circle(pos, radius * 0.9, color),
+                &draw2d::Ellipse::circle(pos, radius * 0.9, color),
             );
 
             let beat_time = if id == self.world.player.unit {
@@ -294,7 +294,7 @@ pub fn audio_mesh(
     source: impl rodio::Source<Item = f32>,
     top_color: Rgba<f32>,
     bottom_color: Rgba<f32>,
-) -> Vec<draw_2d::ColoredVertex> {
+) -> Vec<draw2d::ColoredVertex> {
     if source.channels() != 1 {
         unimplemented!("Only mono audio is supported");
     }
@@ -311,7 +311,7 @@ pub fn audio_mesh(
 //     source: &[Frequency],
 //     top_color: Rgba<f32>,
 //     bottom_color: Rgba<f32>,
-// ) -> Vec<draw_2d::ColoredVertex> {
+// ) -> Vec<draw2d::ColoredVertex> {
 //     construct_points_mesh(
 //         source
 //             .iter()
@@ -327,7 +327,7 @@ fn construct_points_mesh(
     min_y: f32,
     top_color: Rgba<f32>,
     bottom_color: Rgba<f32>,
-) -> Vec<draw_2d::ColoredVertex> {
+) -> Vec<draw2d::ColoredVertex> {
     let mut mesh = Vec::new();
 
     for vec2(x, mut y) in points {
@@ -335,27 +335,27 @@ fn construct_points_mesh(
         if y.abs() < min_y {
             y = min_y;
         }
-        mesh.push(draw_2d::ColoredVertex {
+        mesh.push(draw2d::ColoredVertex {
             a_pos: vec2(x, 0.0),
             a_color: bottom_color,
         });
-        mesh.push(draw_2d::ColoredVertex {
+        mesh.push(draw2d::ColoredVertex {
             a_pos: vec2(x + 1.0, 0.0),
             a_color: bottom_color,
         });
-        mesh.push(draw_2d::ColoredVertex {
+        mesh.push(draw2d::ColoredVertex {
             a_pos: vec2(x, y),
             a_color: top_color,
         });
-        mesh.push(draw_2d::ColoredVertex {
+        mesh.push(draw2d::ColoredVertex {
             a_pos: vec2(x + 1.0, 0.0),
             a_color: bottom_color,
         });
-        mesh.push(draw_2d::ColoredVertex {
+        mesh.push(draw2d::ColoredVertex {
             a_pos: vec2(x, y),
             a_color: top_color,
         });
-        mesh.push(draw_2d::ColoredVertex {
+        mesh.push(draw2d::ColoredVertex {
             a_pos: vec2(x + 1.0, y),
             a_color: top_color,
         });
@@ -383,7 +383,7 @@ fn draw_arc(
     let framebuffer_size = framebuffer.size().map(|x| x as f32);
     let geometry = [(-1, -1), (1, -1), (1, 1), (-1, 1)]
         .into_iter()
-        .map(|(x, y)| draw_2d::Vertex {
+        .map(|(x, y)| draw2d::Vertex {
             a_pos: vec2(x as f32, y as f32),
         })
         .collect();
@@ -404,7 +404,7 @@ fn draw_arc(
                 u_radius_inner: arc.radius_inner / arc.radius_outer,
                 u_color: arc.color,
             },
-            geng::camera2d_uniforms(camera, framebuffer_size),
+            camera.uniforms(framebuffer_size),
         ),
         ugli::DrawParameters {
             blend_mode: Some(ugli::BlendMode::straight_alpha()),
