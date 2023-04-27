@@ -64,7 +64,7 @@ impl ActionEffect {
     ) -> SystemResult<(Effect, EffectContext)> {
         let target = self.aim.assist(world, unit, input.target)?;
         let context = EffectContext {
-            caster: Some(EffectCaster { unit }),
+            caster: Some(Caster { unit }),
             target,
         };
         Ok((self.effect, context))

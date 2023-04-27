@@ -2,7 +2,7 @@ use super::*;
 
 impl World {
     pub fn spawn_particles(&mut self, pos: vec2<Coord>, color: Color) -> SystemResult<()> {
-        let world_pos = self.grid.grid_to_world(pos) + self.grid.cell_size / FCoord::new(2.0);
+        let world_pos = self.grid.grid_to_world(pos);
         self.spawn_particles_world(world_pos, color)
     }
 

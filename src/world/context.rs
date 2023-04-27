@@ -2,12 +2,12 @@ use super::*;
 
 #[derive(Debug, Clone)]
 pub struct EffectContext {
-    pub caster: Option<EffectCaster>,
+    pub caster: Option<Caster>,
     pub target: Option<EffectTarget>,
 }
 
 #[derive(Debug, Clone)]
-pub struct EffectCaster {
+pub struct Caster {
     pub unit: UnitId,
     // pub item: Option<ItemId>,
 }
@@ -65,7 +65,7 @@ impl EffectTarget {
 }
 
 impl EffectContext {
-    pub fn expect_caster(&self) -> ContextResult<EffectCaster> {
+    pub fn expect_caster(&self) -> ContextResult<Caster> {
         self.caster.clone().ok_or(ContextError::NoCaster)
     }
 

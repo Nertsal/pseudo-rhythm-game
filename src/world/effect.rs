@@ -103,6 +103,7 @@ impl EffectProjectile {
             // grid_position,
             world_position,
             velocity,
+            caster: context.caster,
             fraction,
             target_filter: FractionFilter::Enemy,
         };
