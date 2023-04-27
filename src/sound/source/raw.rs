@@ -22,6 +22,10 @@ impl<T: rodio::Sample> RawSource<T> {
         }
         &self.data[self.num_sample..]
     }
+
+    pub fn data(&self) -> std::sync::Arc<Vec<T>> {
+        self.data.clone()
+    }
 }
 
 impl<T: rodio::Sample> Iterator for RawSource<T> {

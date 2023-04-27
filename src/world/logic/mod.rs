@@ -146,8 +146,11 @@ impl World {
         }
 
         // Play music
+        let audio = self.geng.audio();
         for sound in self.music_controller.update(delta_time.as_f32()) {
-            geng::SoundEffect::from_source(&self.geng, &sound).play();
+            let sample_rate = rodio::Source::sample_rate(&sound) as f32;
+            let data = sound.data().as_ref().to_owned();
+            audio.from_raw(data, sample_rate).play();
         }
 
         Ok(())
