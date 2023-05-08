@@ -66,6 +66,7 @@ impl Item {
                 aim: ActionAim::InRange { distance: 5 },
                 effect: Effect::Projectile(Box::new(EffectProjectile {
                     projectile: ProjectilePrefab {
+                        target_filter: FractionFilter::Enemy,
                         on_contact: Effect::Damage(Box::new(EffectDamage { value: damage })),
                     },
                     speed,

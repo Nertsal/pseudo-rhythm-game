@@ -105,7 +105,6 @@ impl EffectProjectile {
             velocity,
             caster: context.caster,
             fraction,
-            target_filter: FractionFilter::Enemy,
         };
         let projectile = self.projectile.instantiate(inst);
         world.projectiles.insert(projectile);

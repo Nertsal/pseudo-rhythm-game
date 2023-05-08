@@ -13,6 +13,7 @@ pub struct Projectile {
 
 #[derive(Debug, Clone)]
 pub struct ProjectilePrefab {
+    pub target_filter: FractionFilter,
     pub on_contact: Effect,
 }
 
@@ -23,7 +24,6 @@ pub struct ProjectileInst {
     pub velocity: vec2<FCoord>,
     pub caster: Option<Caster>,
     pub fraction: Fraction,
-    pub target_filter: FractionFilter,
 }
 
 impl ProjectilePrefab {
@@ -34,7 +34,7 @@ impl ProjectilePrefab {
             velocity: inst.velocity,
             caster: inst.caster,
             fraction: inst.fraction,
-            target_filter: inst.target_filter,
+            target_filter: self.target_filter,
             on_contact: self.on_contact,
         }
     }
