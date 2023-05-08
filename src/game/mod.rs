@@ -4,6 +4,7 @@ use geng::{prelude::*, Camera2d};
 use crate::{
     assets::Assets,
     sound::{MusicConfig, SectionName, Synthesizer},
+    util::Report,
     world::*,
 };
 
@@ -68,7 +69,7 @@ impl geng::State for Game {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Rgba::BLACK), None, None);
         let result = self.draw(framebuffer);
-        crate::util::report_err(result);
+        result.report_err();
     }
 
     fn update(&mut self, delta_time: f64) {
@@ -76,7 +77,9 @@ impl geng::State for Game {
 
         let delta_time = crate::world::Time::new(delta_time);
 
-        crate::util::report_err(self.world.update(self.action.take(), delta_time));
+        self.world
+            .update(self.action.take(), delta_time)
+            .report_err();
     }
 
     fn handle_event(&mut self, event: geng::Event) {
