@@ -16,6 +16,7 @@ pub struct Game {
     camera: Camera2d,
     framebuffer_size: vec2<usize>,
     cursor_world_pos: vec2<f32>,
+    action: Option<(PlayerAction, ActionInput)>,
 }
 
 impl Game {
@@ -36,12 +37,12 @@ impl Game {
             },
             framebuffer_size: vec2(1, 1),
             cursor_world_pos: vec2::ZERO,
+            action: None,
         }
     }
 
     fn action(&mut self, action: PlayerAction) {
-        let result = self.world.player_action(action, self.get_action_input());
-        crate::util::report_err(result);
+        self.action = Some((action, self.get_action_input()));
     }
 
     fn update_cursor(&mut self, cursor_pos: vec2<f64>) {
@@ -75,7 +76,7 @@ impl geng::State for Game {
 
         let delta_time = crate::world::Time::new(delta_time);
 
-        crate::util::report_err(self.world.update(delta_time));
+        crate::util::report_err(self.world.update(self.action.take(), delta_time));
     }
 
     fn handle_event(&mut self, event: geng::Event) {

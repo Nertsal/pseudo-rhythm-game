@@ -7,8 +7,8 @@ mod projectiles;
 mod units;
 mod util;
 
-struct Logic<'a> {
-    world: &'a mut World,
+pub struct Logic<'a> {
+    pub world: &'a mut World,
     delta_time: Time,
     queued_effects: VecDeque<QueuedEffect>,
 }
@@ -18,8 +18,51 @@ struct QueuedEffect {
     pub context: EffectContext,
 }
 
+impl World {
+    pub fn update(
+        &mut self,
+        player_action: Option<(PlayerAction, ActionInput)>,
+        delta_time: Time,
+    ) -> SystemResult<()> {
+        let beat_time = Time::new(60.0 / self.beat_controller.get_bpm());
+        self.player_beat_time += delta_time / beat_time;
+
+        let mut logic = Logic {
+            world: self,
+            delta_time,
+            queued_effects: default(),
+        };
+        logic.process(player_action)?;
+
+        // Update music
+        let ticks = self.beat_controller.update(delta_time.as_f32());
+        self.music_controller
+            .set_bpm(self.beat_controller.get_bpm());
+        for _ in 0..ticks {
+            self.music_controller.tick();
+        }
+
+        // Play music
+        let audio = self.geng.audio();
+        for sound in self.music_controller.update(delta_time.as_f32()) {
+            let sample_rate = rodio::Source::sample_rate(&sound) as f32;
+            let data = sound.data().as_ref().to_owned();
+            audio.from_raw(data, sample_rate).play();
+        }
+
+        Ok(())
+    }
+}
+
 impl Logic<'_> {
-    pub fn process(&mut self) -> SystemResult<()> {
+    pub fn process(
+        &mut self,
+        player_action: Option<(PlayerAction, ActionInput)>,
+    ) -> SystemResult<()> {
+        if let Some((action, input)) = player_action {
+            self.player_action(action, input)?;
+        }
+
         self.process_projectiles_move()?;
         self.process_projectiles_collide()?;
 
@@ -32,28 +75,26 @@ impl Logic<'_> {
         Ok(())
     }
 
-    fn process_effects(&mut self) -> SystemResult<()> {
+    pub fn process_effects(&mut self) -> SystemResult<()> {
         while let Some(effect) = self.queued_effects.pop_front() {
-            effect.effect.apply(self.world, effect.context)?;
+            effect.effect.apply(self, effect.context)?;
         }
 
         Ok(())
     }
-}
 
-impl World {
     pub fn player_action(&mut self, action: PlayerAction, input: ActionInput) -> SystemResult<()> {
-        self.player_beat_time = Time::ZERO;
-        let ticks = self.beat_controller.player_beat();
+        self.world.player_beat_time = Time::ZERO;
+        let ticks = self.world.beat_controller.player_beat();
         for _ in 0..ticks {
-            self.music_controller.tick();
+            self.world.music_controller.tick();
         }
 
         // TODO: validate action
-        self.unit_action(self.player.unit, action, input)?;
+        self.unit_action(self.world.player.unit, action, input)?;
 
         // Synchronize units
-        for (_, unit) in self.units.unit.iter_mut() {
+        for (_, unit) in self.world.units.unit.iter_mut() {
             let Some(unit) = unit else {
                 continue;
             };
@@ -74,37 +115,7 @@ impl World {
         Ok(())
     }
 
-    pub fn update(&mut self, delta_time: Time) -> SystemResult<()> {
-        let beat_time = Time::new(60.0 / self.beat_controller.get_bpm());
-        self.player_beat_time += delta_time / beat_time;
-
-        let mut logic = Logic {
-            world: self,
-            delta_time,
-            queued_effects: default(),
-        };
-        logic.process()?;
-
-        // Update music
-        let ticks = self.beat_controller.update(delta_time.as_f32());
-        self.music_controller
-            .set_bpm(self.beat_controller.get_bpm());
-        for _ in 0..ticks {
-            self.music_controller.tick();
-        }
-
-        // Play music
-        let audio = self.geng.audio();
-        for sound in self.music_controller.update(delta_time.as_f32()) {
-            let sample_rate = rodio::Source::sample_rate(&sound) as f32;
-            let data = sound.data().as_ref().to_owned();
-            audio.from_raw(data, sample_rate).play();
-        }
-
-        Ok(())
-    }
-
-    fn unit_action(
+    pub fn unit_action(
         &mut self,
         unit: UnitId,
         action: Action,
@@ -117,8 +128,13 @@ impl World {
         }
     }
 
-    fn unit_move(&mut self, unit: UnitId, action: ActionMove) -> SystemResult<()> {
-        let &pos = self.units.grid_position.get(unit).expect("Unit not found");
+    pub fn unit_move(&mut self, unit: UnitId, action: ActionMove) -> SystemResult<()> {
+        let &pos = self
+            .world
+            .units
+            .grid_position
+            .get(unit)
+            .expect("Unit not found");
         match action {
             ActionMove::Slide(slide) => self.unit_slide(unit, slide)?,
             ActionMove::Teleport(_tp) => {
@@ -126,25 +142,31 @@ impl World {
             }
         }
 
-        if Some(&pos) != self.units.grid_position.get(unit) {
+        if Some(&pos) != self.world.units.grid_position.get(unit) {
             // Unit actually moved
-            self.spawn_particles(pos, Color::BLUE)?;
+            self.world.spawn_particles(pos, Color::BLUE)?;
         }
 
         Ok(())
     }
 
-    fn unit_slide(&mut self, unit: UnitId, slide: MoveSlide) -> SystemResult<()> {
+    pub fn unit_slide(&mut self, unit: UnitId, slide: MoveSlide) -> SystemResult<()> {
         if slide.delta.x.abs() > 1 || slide.delta.y.abs() > 1 {
             // TODO
             todo!("Only single-tile slide move implemented");
         }
 
-        let &pos = self.units.grid_position.get(unit).expect("Unit not found");
+        let &pos = self
+            .world
+            .units
+            .grid_position
+            .get(unit)
+            .expect("Unit not found");
 
         let target = pos + slide.delta;
 
         let other = self
+            .world
             .units
             .grid_position
             .iter()
@@ -155,6 +177,7 @@ impl World {
         }
 
         *self
+            .world
             .units
             .grid_position
             .get_mut(unit)
@@ -170,34 +193,49 @@ impl World {
     }
 
     pub fn unit_damage(&mut self, unit: UnitId, damage: Hp) -> SystemResult<()> {
-        let &pos = self.units.grid_position.get(unit).expect("Unit not found");
+        let &pos = self
+            .world
+            .units
+            .grid_position
+            .get(unit)
+            .expect("Unit not found");
 
-        let health = self.units.health.get_mut(unit).expect("Unit not found");
+        let health = self
+            .world
+            .units
+            .health
+            .get_mut(unit)
+            .expect("Unit not found");
         health.damage(damage);
         if health.is_dead() {
             // Unit died
             // TODO: death effect
-            self.units.remove(unit);
+            self.world.units.remove(unit);
         }
 
-        self.spawn_particles(pos, Color::WHITE)?;
+        self.world.spawn_particles(pos, Color::WHITE)?;
         Ok(())
     }
 
-    fn unit_use_item(
+    pub fn unit_use_item(
         &mut self,
         unit: UnitId,
         action: ActionUseItem,
         input: ActionInput,
     ) -> SystemResult<()> {
-        let items = self.units.held_items.get(unit).expect("Unit not found");
+        let items = self
+            .world
+            .units
+            .held_items
+            .get(unit)
+            .expect("Unit not found");
         let Some(item) = items.get_item(action.item) else {
             log::debug!("Tried using item from an empty hand");
             return Ok(());
         };
 
         let action = item.on_use.clone();
-        let (effect, context) = action.into_effect(self, unit, input)?;
+        let (effect, context) = action.into_effect(self.world, unit, input)?;
         effect.apply(self, context)?;
 
         Ok(())

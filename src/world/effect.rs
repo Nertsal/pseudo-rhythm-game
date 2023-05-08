@@ -34,39 +34,39 @@ pub struct EffectParticles {
 }
 
 impl Effect {
-    pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
+    pub fn apply(self, logic: &mut Logic<'_>, context: EffectContext) -> SystemResult<()> {
         log::debug!("Applying effect {self:?} with context {context:?}");
         match self {
             Effect::Noop => Ok(()),
-            Effect::If(effect) => effect.apply(world, context),
-            Effect::Damage(effect) => effect.apply(world, context),
-            Effect::Projectile(effect) => effect.apply(world, context),
-            Effect::Particles(effect) => effect.apply(world, context),
+            Effect::If(effect) => effect.apply(logic, context),
+            Effect::Damage(effect) => effect.apply(logic, context),
+            Effect::Projectile(effect) => effect.apply(logic, context),
+            Effect::Particles(effect) => effect.apply(logic, context),
         }
     }
 }
 
 impl EffectIf {
-    pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
-        let condition = self.condition.evaluate(world, &context)?;
+    pub fn apply(self, logic: &mut Logic<'_>, context: EffectContext) -> SystemResult<()> {
+        let condition = self.condition.evaluate(logic.world, &context)?;
         if condition {
-            self.then.apply(world, context)
+            self.then.apply(logic, context)
         } else {
-            self.otherwise.apply(world, context)
+            self.otherwise.apply(logic, context)
         }
     }
 }
 
 impl EffectDamage {
-    pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
+    pub fn apply(self, logic: &mut Logic<'_>, context: EffectContext) -> SystemResult<()> {
         let target = context.expect_target()?;
-        match target.find_unit(world) {
+        match target.find_unit(logic.world) {
             Ok(unit) => {
-                world.unit_damage(unit, self.value)?;
+                logic.unit_damage(unit, self.value)?;
             }
             Err(_) => {
-                let pos = target.find_pos(world)?;
-                world.spawn_particles(pos, Color::WHITE)?;
+                let pos = target.find_pos(logic.world)?;
+                logic.world.spawn_particles(pos, Color::WHITE)?;
             }
         }
         Ok(())
@@ -74,26 +74,28 @@ impl EffectDamage {
 }
 
 impl EffectProjectile {
-    pub fn apply(self, world: &mut World, context: EffectContext) -> SystemResult<()> {
+    pub fn apply(self, logic: &mut Logic<'_>, context: EffectContext) -> SystemResult<()> {
         let caster = context.expect_caster()?;
         // let &grid_position = world
         //     .units
         //     .grid_position
         //     .get(caster.unit)
         //     .expect("Unit not found");
-        let &world_position = world
+        let &world_position = logic
+            .world
             .units
             .world_position
             .get(caster.unit)
             .expect("Unit not found");
-        let &fraction = world
+        let &fraction = logic
+            .world
             .units
             .fraction
             .get(caster.unit)
             .expect("Unit not found");
 
         let target = context.expect_target()?;
-        let target_pos = target.find_world_pos(world)?;
+        let target_pos = target.find_world_pos(logic.world)?;
 
         let delta = target_pos - world_position;
         let dir = delta.normalize_or_zero();
@@ -107,14 +109,14 @@ impl EffectProjectile {
             fraction,
         };
         let projectile = self.projectile.instantiate(inst);
-        world.projectiles.insert(projectile);
+        logic.world.projectiles.insert(projectile);
         Ok(())
     }
 }
 
 impl EffectParticles {
-    pub fn apply(self, world: &mut World, _context: EffectContext) -> SystemResult<()> {
-        world.spawn_particles(self.pos, self.color)?;
+    pub fn apply(self, logic: &mut Logic<'_>, _context: EffectContext) -> SystemResult<()> {
+        logic.world.spawn_particles(self.pos, self.color)?;
         Ok(())
     }
 }

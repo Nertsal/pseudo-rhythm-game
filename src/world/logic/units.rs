@@ -52,7 +52,7 @@ impl Logic<'_> {
                 .as_ref()
                 .expect("Unit AI not found");
             if let Some((action, input)) = unit.behaviour.evaluate(self.world, id)? {
-                self.world.unit_action(id, action, input)?;
+                self.unit_action(id, action, input)?;
             }
         }
 
