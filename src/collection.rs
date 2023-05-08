@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use ecs::prelude::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Id(u64);
 
+#[derive(Clone)]
 pub struct Collection<T> {
     next_id: Id,
     inner: HashMap<Id, T>,

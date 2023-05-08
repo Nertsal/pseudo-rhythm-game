@@ -105,6 +105,7 @@ impl EffectProjectile {
             // grid_position,
             world_position,
             velocity,
+            target,
             caster: context.caster,
             fraction,
         };

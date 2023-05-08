@@ -5,6 +5,7 @@ pub struct Projectile {
     // pub grid_position: vec2<Coord>,
     pub world_position: vec2<FCoord>,
     pub velocity: vec2<FCoord>,
+    pub target: EffectTarget,
     pub caster: Option<Caster>,
     pub fraction: Fraction,
     pub target_filter: FractionFilter,
@@ -22,6 +23,7 @@ pub struct ProjectileInst {
     // pub grid_position: vec2<Coord>,
     pub world_position: vec2<FCoord>,
     pub velocity: vec2<FCoord>,
+    pub target: EffectTarget,
     pub caster: Option<Caster>,
     pub fraction: Fraction,
 }
@@ -32,6 +34,7 @@ impl ProjectilePrefab {
             // grid_position: inst.grid_position,
             world_position: inst.world_position,
             velocity: inst.velocity,
+            target: inst.target,
             caster: inst.caster,
             fraction: inst.fraction,
             target_filter: self.target_filter,

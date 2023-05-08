@@ -3,15 +3,43 @@ use super::*;
 impl Logic<'_> {
     pub fn process_projectiles_move(&mut self) -> SystemResult<()> {
         #[derive(StructQuery)]
-        struct Item<'a> {
+        struct MoveItem<'a> {
             world_position: &'a mut vec2<FCoord>,
             velocity: &'a vec2<FCoord>,
         }
 
-        let mut query = query_item!(self.world.projectiles);
+        let from_pos = self.world.projectiles.world_position.clone();
+
+        let mut query = query_move_item!(self.world.projectiles);
         let mut iter = query.iter_mut();
         while let Some((_, item)) = iter.next() {
             *item.world_position += *item.velocity * self.delta_time;
+        }
+
+        // Update target
+        #[derive(StructQuery)]
+        struct Item<'a> {
+            world_position: &'a vec2<FCoord>,
+            target: &'a EffectTarget,
+        }
+
+        let mut dead = Vec::new();
+        for (id, item) in &query_item!(self.world.projectiles) {
+            let from = *from_pos.get(id).unwrap();
+            let to = *item.world_position;
+            let target = item.target.find_world_pos(self.world)?;
+            let dist = crate::util::dist_to_segment(target, Segment(from, to));
+            if dist.as_f32() < 0.1 {
+                // Reached target
+                dead.push(id);
+            }
+        }
+
+        dead.sort();
+        for id in dead.into_iter().rev() {
+            let proj = self.world.projectiles.remove(id).unwrap();
+            self.world
+                .spawn_particles_world(proj.world_position, Rgba::opaque(0.4, 0.4, 0.4))?;
         }
 
         Ok(())
