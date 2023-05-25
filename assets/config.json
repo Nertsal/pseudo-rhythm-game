@@ -1,0 +1,47 @@
+{
+  "soundfonts": {
+    "drums": "Korg_X5_Drums.sf2",
+    "piano": "piano.sf2"
+  },
+  "bpm": 80,
+  "ticks_per_beat": 4,
+  "sections": {
+    "slow": {
+      "soundfont": "drums",
+      "bpm_range": [0, 50],
+      "volume": 1.0,
+      "key": "C2",
+      "default_velocity": 50,
+      "default_duration": 1,
+      "events": [
+        11, 7, 7, 7
+      ]
+    },
+    "moderate": {
+      "soundfont": "drums",
+      "bpm_range": [50, 100],
+      "volume": 1.0,
+      "key": "C2",
+      "default_velocity": 50,
+      "default_duration": 1,
+      "events": [
+        11,
+        {
+          "delay": 1
+        },
+        7
+      ]
+    },
+    "fast": {
+      "soundfont": "drums",
+      "bpm_range": [100, 200],
+      "volume": 1.0,
+      "key": "C2",
+      "default_velocity": 50,
+      "default_duration": 1,
+      "events": [
+        7
+      ]
+    }
+  }
+}
